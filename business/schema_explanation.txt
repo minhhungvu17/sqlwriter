@@ -1,0 +1,41 @@
+The following describes the schema relationships and meanings for the datasets:
+
+
+Cohort Overview:
+- AMD and FMT datasets represent the healthy cohort.
+- EMULSION dataset represents the diseased or unhealthy cohort related to NAFLD or what we call MASLD
+- All tables prefixed with "response_" come from qualtrics survey data
+
+
+EMULSION Cohort Tables:
+- emulsion_amra_data → Body scan data for the Emulsion cohort.
+- emulsion_clinical_metadata → Clinical metadata for the Emulsion cohort.
+- emulsion_subject_ind_metadata → Stores indicators showing whether a subject has completed FFQ, AMRA scan, and sequencing.
+
+
+Healthy Cohort (AMD/FMT) Survey Tables:
+- ffq_grams_per_day → Food Frequency Questionnaire (FFQ) grams-per-day data.
+- ffq_nutrients_per_day → FFQ nutrients-per-day data.
+- ffq_servings_per_day → FFQ servings-per-day data.
+
+
+All tables prefixed with `response_` represent survey-related data collected from AMD/FMT (healthy cohort):
+  - response_ccmq → CCMQ questionnaire data.
+  - response_demographic → Subject demographic data.
+  - response_smoking → Smoking-related responses.
+  - response_psqi → PSQI questionnaire data.
+  - response_pss → Perceived Stress Scale (PSS) data.
+  - response_physiology → Height, weight, and BMI data.
+  - response_metadata → Contains response_id mapping to survey_id.
+  - response_medical → Medical history data.
+  - response_gpaq → GPAQ (Global Physical Activity Questionnaire) data.
+  - response_dietary_habits → Dietary habits survey data.
+  - response_score → Scoring or aggregated results from survey responses.
+
+
+Other Related Tables:
+- lilac_kit → Contains kit_id data.
+- lilac_sequence / sequence_16s / sequence_shotgun → Sequence ID data.
+- pre_ftp_raw / post_ftp_raw → FMT (Fecal Microbiota Transplant) data before and after treatment.
+- fmt_sequence_mapping / ftp_sequence_mapping → Mapping tables linking FMT sequencing data to sample metadata.
+

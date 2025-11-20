@@ -1,0 +1,19 @@
+"question","sql"
+"Finding subject and its related paths that have no hypertension, hyperlipidemia, type 2 diabetes and have a healthy bmi","select sequence_shotgun.* from response_medical_mastersheet
+inner join response_physiology
+  on response_physiology.response_id = response_medical_mastersheet.response_id
+inner join response_metadata
+  on response_metadata.response_id = response_medical_mastersheet.response_id
+inner join sequence_shotgun 
+  on sequence_shotgun.lab_id = response_metadata.amd_code
+where ""Hyperlipidemia/Cholesterol"" = 'FALSE'
+  and hypertension = 'FALSE'
+  and ""Type II Diabetes"" = 'FALSE'
+  and ""physiology-bmi-bmi"" < 23"
+
+"Finding subjects in the emulsion cohort that act as a control","SELECT * from emulsion_clinical_metadata
+inner join emulsion_subject_ind_metadata
+ on emulsion_clinical_metadata.subject_id = emulsion_subject_ind_metadata.subject_id
+ where flip_algo_name = 'not NAFLD'
+ and diabetes_ind = 0 and hypertension_ind = 0
+ and dyslipidemia_ind = 0 and bmi_val <23"

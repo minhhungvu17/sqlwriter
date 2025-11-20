@@ -1,0 +1,23 @@
+# Core app and framework
+vanna
+fastapi
+uvicorn[standard]
+
+# Environment management
+python-dotenv
+
+# Database (PostgreSQL)
+psycopg[binary]
+
+# Vector store / memory
+chromadb
+
+# LLM client (Azure OpenAI compatible)
+openai
+
+# Visualization and data handling (used by VisualizeDataTool)
+pandas
+matplotlib
+plotly
+
+
