@@ -11,6 +11,8 @@ from vanna.servers.fastapi import VannaFastAPIServer
 from vanna.integrations.azureopenai import AzureOpenAILlmService
 from vanna.integrations.postgres import PostgresRunner
 from vanna.integrations.chromadb import ChromaAgentMemory
+from seed_tools import SeedReferenceTool
+from seed_rag import seed_on_start
 
 # Load environment variables from .env if present
 load_dotenv()
@@ -56,6 +58,7 @@ tools.register_local_tool(SaveQuestionToolArgsTool(), access_groups=['admin'])
 tools.register_local_tool(SearchSavedCorrectToolUsesTool(), access_groups=['admin', 'user'])
 tools.register_local_tool(SaveTextMemoryTool(), access_groups=['admin', 'user'])
 tools.register_local_tool(VisualizeDataTool(), access_groups=['admin', 'user'])
+tools.register_local_tool(SeedReferenceTool(), access_groups=['admin', 'user'])
 
 agent = Agent(
     llm_service=llm,
@@ -63,6 +66,9 @@ agent = Agent(
     user_resolver=user_resolver,
     agent_memory=agent_memory
 )
+
+# Seed CSV-based references into memory (idempotent via stable IDs)
+seed_on_start()
 
 # Run the server
 server = VannaFastAPIServer(agent)
