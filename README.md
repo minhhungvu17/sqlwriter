@@ -17,10 +17,9 @@ pip install -r requirements.txt
 ### 3) (Optional) Configure environment
 Create a `.env` file in the project root if needed. Useful variables:
 ```
-# Azure OpenAI
-AZURE_OPENAI_API_KEY=...
-AZURE_OPENAI_ENDPOINT=...
-AZURE_OPENAI_DEPLOYMENT=gpt-4o-mini
+# OpenAI
+OPENAI_API_KEY=...
+OPENAI_MODEL=gpt-4o-mini
 
 # Database (choose one approach)
 DATABASE_URL=postgresql://user:password@localhost:5432/dbname

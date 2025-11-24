@@ -8,7 +8,7 @@ from vanna.core.user import UserResolver, User, RequestContext
 from vanna.tools import RunSqlTool, VisualizeDataTool
 from vanna.tools.agent_memory import SaveQuestionToolArgsTool, SearchSavedCorrectToolUsesTool, SaveTextMemoryTool
 from vanna.servers.fastapi import VannaFastAPIServer
-from vanna.integrations.azureopenai import AzureOpenAILlmService
+from vanna.integrations.openai import OpenAILlmService
 from vanna.integrations.postgres import PostgresRunner
 from vanna.integrations.chromadb import ChromaAgentMemory
 from seed_tools import SeedReferenceTool
@@ -18,10 +18,9 @@ from seed_rag import seed_on_start
 load_dotenv()
 
 # Configure your LLM
-llm = AzureOpenAILlmService(
-    model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o-mini"),
-    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
+llm = OpenAILlmService(
+    model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+    api_key=os.getenv("OPENAI_API_KEY")
 )
 
 # Configure your database
