@@ -13,6 +13,7 @@ from vanna.servers.fastapi import VannaFastAPIServer
 from vanna.integrations.openai import OpenAILlmService
 from vanna.integrations.postgres import PostgresRunner
 from vanna.integrations.chromadb import ChromaAgentMemory
+from vanna.core.agent.config import AgentConfig
 from seed_tools import SeedReferenceTool
 from seed_rag import seed_on_start
 
@@ -83,11 +84,15 @@ tools.register_local_tool(SaveTextMemoryTool(), access_groups=['admin', 'user'])
 tools.register_local_tool(VisualizeDataTool(), access_groups=['admin', 'user'])
 tools.register_local_tool(SeedReferenceTool(), access_groups=['admin', 'user'])
 
+# Configure agent behavior (increase tool running number via env)
+max_tool_iterations = int(os.getenv("VANNA_MAX_TOOL_ITERATIONS", "20"))
+
 agent = Agent(
     llm_service=llm,
     tool_registry=tools,
     user_resolver=user_resolver,
-    agent_memory=agent_memory
+    agent_memory=agent_memory,
+    config=AgentConfig(max_tool_iterations=max_tool_iterations)
 )
 
 # Seed CSV-based references into memory (idempotent via stable IDs)
