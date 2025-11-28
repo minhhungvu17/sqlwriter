@@ -27,6 +27,7 @@ elegance_unhealthy AS (
         b.hcc10_age_no AS age_no,
         b.ethnicity_desc AS race,
         a.sequence_number AS sequencing_id,
+
         b.hypertension_ind,
         b.systolic_blood_pressure_val,
         b.diastolic_blood_pressure_val,
@@ -38,8 +39,10 @@ elegance_unhealthy AS (
         b.hyperlipidaemia_ind,
         b.total_cholesterol_val,
         b.triglyceride_val,
+
         1 AS unhealthy_ind,
         'ELEGANCE' AS dataset_source
+
     FROM (
         SELECT  
             plk.lab_id,
@@ -53,6 +56,7 @@ elegance_unhealthy AS (
             ON plk.lab_id = metadata.lab_id
         WHERE pls.sequence_number <> 'Not sent for sequencing'
     ) a
+
     INNER JOIN (
         -----------------------------------------------------------------
         -- Elegance biomarker data (main + extension, pick best per subject+visit)
@@ -92,22 +96,27 @@ elegance_unhealthy AS (
                     b.hba1c_val,
                     b.total_cholesterol_val,
                     b.triglyceride_val,
+
                     -- BMI
                     o.weight_val / POWER(o.height_val / 100.0, 2) AS bmi_val,
+
                     CASE
                         WHEN o.weight_val / POWER(o.height_val / 100.0, 2) < 23 THEN 'Normal'
                         WHEN o.weight_val / POWER(o.height_val / 100.0, 2) >= 23
                              AND o.weight_val / POWER(o.height_val / 100.0, 2) < 25 THEN 'Overweight'
                         ELSE 'Obese'
                     END AS bmi_category_desc,
+
                     CASE WHEN o.weight_val / POWER(o.height_val / 100.0, 2) >= 25
                          THEN 1 ELSE 0 END AS obese_ind,
+
                     CASE WHEN o.systolic_blood_pressure_val >= 130
                            AND o.diastolic_blood_pressure_val >= 80 THEN 1 ELSE 0 END AS hypertension_ind,
                     CASE WHEN b.hba1c_val >= 6.5 THEN 1 ELSE 0 END AS diabetes_ind,
                     CASE WHEN b.total_cholesterol_val >= 6.2
                            OR b.triglyceride_val >= 2.3 THEN 1 ELSE 0 END AS hyperlipidaemia_ind
-                FROM ""10_elegance_other_information"" o
+
+                FROM "10_elegance_other_information" o
                 INNER JOIN elegance_biomarker_data b
                     ON o.subject_id = b.subject_id
                    AND o.visit_id = b.visit_id
@@ -125,7 +134,9 @@ elegance_unhealthy AS (
                     )
                     AND o.weight_val / POWER(o.height_val / 100.0, 2) >= 18.5   -- drop BMI < 18.5
                     AND b.visit_id = 'V1'
+
                 UNION ALL
+
                 -- extension biomarker table
                 SELECT
                     o.subject_id,
@@ -138,13 +149,16 @@ elegance_unhealthy AS (
                     be.hba1c_val,
                     be.total_cholesterol_val,
                     be.triglyceride_val,
+
                     o.weight_val / POWER(o.height_val / 100.0, 2) AS bmi_val,
+
                     CASE
                         WHEN o.weight_val / POWER(o.height_val / 100.0, 2) < 23 THEN 'Normal'
                         WHEN o.weight_val / POWER(o.height_val / 100.0, 2) >= 23
                              AND o.weight_val / POWER(o.height_val / 100.0, 2) < 25 THEN 'Overweight'
                         ELSE 'Obese'
                     END AS bmi_category_desc,
+
                     CASE WHEN o.weight_val / POWER(o.height_val / 100.0, 2) >= 25
                          THEN 1 ELSE 0 END AS obese_ind,
                     CASE WHEN o.systolic_blood_pressure_val >= 130
@@ -152,7 +166,8 @@ elegance_unhealthy AS (
                     CASE WHEN be.hba1c_val >= 6.5 THEN 1 ELSE 0 END AS diabetes_ind,
                     CASE WHEN be.total_cholesterol_val >= 6.2
                            OR be.triglyceride_val >= 2.3 THEN 1 ELSE 0 END AS hyperlipidaemia_ind
-                FROM ""10_elegance_other_information"" o
+
+                FROM "10_elegance_other_information" o
                 INNER JOIN elegance_biomarker_extension_data be
                     ON o.subject_id = be.subject_id
                    AND o.visit_id = be.visit_id
@@ -177,38 +192,48 @@ elegance_unhealthy AS (
         ON a.subject_id = b.subject_id
        AND a.visit_number = b.visit_id
 ),
+
 ---------------------------------------------------------------------
 -- 2. AMD UNHEALTHY
 ---------------------------------------------------------------------
 amd_unhealthy AS (
     SELECT
         meta.amd_code AS subject_id,
-        dm.""demographic-gender-gender"" AS gender,
-        dm.""demographic-age-age"" AS age_no,
-        dm.""demographic-ethnicity-race_paternal"" AS race,
+        dm."demographic-gender-gender" AS gender,
+        dm."demographic-age-age" AS age_no,
+        dm."demographic-ethnicity-race_paternal" AS race,
         ss.sequence_number AS sequencing_id,
-        CASE WHEN rm.""hypertension"" = TRUE THEN 1 ELSE 0 END AS hypertension_ind,
+
+        CASE WHEN rm."hypertension" = TRUE THEN 1 ELSE 0 END AS hypertension_ind,
         NULL::numeric AS systolic_blood_pressure_val,
         NULL::numeric AS diastolic_blood_pressure_val,
-        CASE WHEN rm.""Type II Diabetes"" = TRUE THEN 1 ELSE 0 END AS diabetes_ind,
+
+        CASE WHEN rm."Type II Diabetes" = TRUE THEN 1 ELSE 0 END AS diabetes_ind,
         NULL::numeric AS hba1c_val,
-        CASE WHEN rp.""physiology-bmi-bmi"" >= 25 THEN 1 ELSE 0 END AS obese_ind,
+
+        CASE WHEN rp."physiology-bmi-bmi" >= 25 THEN 1 ELSE 0 END AS obese_ind,
+
         CASE
-            WHEN rp.""physiology-bmi-bmi"" < 23 THEN 'Normal'
-            WHEN rp.""physiology-bmi-bmi"" >= 23
-                 AND rp.""physiology-bmi-bmi"" < 25 THEN 'Overweight'
+            WHEN rp."physiology-bmi-bmi" < 23 THEN 'Normal'
+            WHEN rp."physiology-bmi-bmi" >= 23
+                 AND rp."physiology-bmi-bmi" < 25 THEN 'Overweight'
             ELSE 'Obese'
         END AS bmi_category_desc,
-        ROUND(rp.""physiology-bmi-bmi""::numeric, 2) AS bmi_val,
-        CASE WHEN rm.""Hyperlipidemia/Cholesterol"" = TRUE THEN 1 ELSE 0 END AS hyperlipidaemia_ind,
+
+        ROUND(rp."physiology-bmi-bmi"::numeric, 2) AS bmi_val,
+
+        CASE WHEN rm."Hyperlipidemia/Cholesterol" = TRUE THEN 1 ELSE 0 END AS hyperlipidaemia_ind,
+
         NULL::numeric AS total_cholesterol_val,
         NULL::numeric AS triglyceride_val,
+
         1 AS unhealthy_ind,
         'AMD' AS dataset_source
+
     FROM response_medical_mastersheet rm
     INNER JOIN response_metadata meta
         ON rm.response_id = meta.response_id
-    INNER INNER JOIN response_physiology rp
+    INNER JOIN response_physiology rp
         ON rp.response_id = meta.response_id
     INNER JOIN sequence_shotgun ss
         ON ss.kit_id = meta.kit_id
@@ -216,14 +241,15 @@ amd_unhealthy AS (
         ON meta.response_id = dm.response_id
     WHERE
         (
-              rm.""Hyperlipidemia/Cholesterol"" = TRUE
-           OR rm.""hypertension"" = TRUE
-           OR rm.""Type II Diabetes"" = TRUE
-           OR rp.""physiology-bmi-bmi"" >= 23
+              rm."Hyperlipidemia/Cholesterol" = TRUE
+           OR rm."hypertension" = TRUE
+           OR rm."Type II Diabetes" = TRUE
+           OR rp."physiology-bmi-bmi" >= 23
         )
-        AND rp.""physiology-bmi-bmi"" >= 18.5                        -- drop BMI < 18.5
+        AND rp."physiology-bmi-bmi" >= 18.5                        -- drop BMI < 18.5
         AND ss.sequence_number <> 'Not sent for sequencing'
 ),
+
 ---------------------------------------------------------------------
 -- 3. EMULSION UNHEALTHY
 ---------------------------------------------------------------------
@@ -232,31 +258,42 @@ emulsion_unhealthy AS (
         c.subject_id,
         CASE WHEN c.gender_cd::int = 1 THEN 'Male' ELSE 'Female' END AS gender,
         c.enrolment_age_no AS age_no,
+
         CASE
             WHEN c.race_cd::int = 0 THEN 'Chinese'
             WHEN c.race_cd::int = 1 THEN 'Malay'
             WHEN c.race_cd::int = 2 THEN 'Indian'
             ELSE 'Others'
         END AS race,
+
         s.sequencing_id,
+
         c.hypertension_ind,
         NULL::numeric AS systolic_blood_pressure_val,
         NULL::numeric AS diastolic_blood_pressure_val,
+
         c.diabetes_ind,
         NULL::numeric AS hba1c_val,
+
         CASE WHEN c.bmi_val >= 25 THEN 1 ELSE 0 END AS obese_ind,
+
         CASE
             WHEN c.bmi_val < 23 THEN 'Normal'
             WHEN c.bmi_val >= 23 AND c.bmi_val < 25 THEN 'Overweight'
             ELSE 'Obese'
         END AS bmi_category_desc,
+
         ROUND(c.bmi_val::numeric, 2) AS bmi_val,
+
         CASE WHEN c.dyslipidemia_ind = 1
-               OR c.""high_TG_ind"" = 1 THEN 1 ELSE 0 END AS hyperlipidaemia_ind,
+               OR c."high_TG_ind" = 1 THEN 1 ELSE 0 END AS hyperlipidaemia_ind,
+
         NULL::numeric AS total_cholesterol_val,
         NULL::numeric AS triglyceride_val,
+
         1 AS unhealthy_ind,
         'EMULSION' AS dataset_source
+
     FROM emulsion_clinical_metadata c
     INNER JOIN emulsion_subject_ind_metadata s
         ON c.subject_id = s.subject_id
@@ -266,12 +303,13 @@ emulsion_unhealthy AS (
          OR c.hypertension_ind = 1
          OR c.diabetes_ind = 1
          OR c.dyslipidemia_ind = 1
-         OR c.""high_TG_ind"" = 1
+         OR c."high_TG_ind" = 1
         )
         AND c.bmi_val >= 18.5                           -- drop BMI < 18.5
         AND s.sequencing_data_ind = 'Y'
         AND s.sequencing_id <> 'Not sent for sequencing'
 ),
+
 ---------------------------------------------------------------------
 -- 4. FULL UNHEALTHY UNION
 ---------------------------------------------------------------------
@@ -282,6 +320,7 @@ unhealthy_raw AS (
     UNION ALL
     SELECT * FROM emulsion_unhealthy
 ),
+
 -- ensure each unhealthy SUBJECT appears only once
 -- AND restrict to BMI > 27.5
 unhealthy_unique AS (
@@ -298,32 +337,41 @@ unhealthy_unique AS (
     ) x
     WHERE unhealthy_subject_rn = 1
 ),
+
 ---------------------------------------------------------------------
 -- 5. CONTROL GROUP (AMD HEALTHY CONTROL)
 ---------------------------------------------------------------------
 control_raw AS (
     SELECT
         meta.amd_code AS subject_id,
-        dm.""demographic-gender-gender"" AS gender,
-        dm.""demographic-age-age"" AS age_no,
-        dm.""demographic-ethnicity-race_paternal"" AS race,
+        dm."demographic-gender-gender" AS gender,
+        dm."demographic-age-age" AS age_no,
+        dm."demographic-ethnicity-race_paternal" AS race,
         ss.sequence_number AS sequencing_id,
-        CASE WHEN rm.""hypertension"" = TRUE THEN 1 ELSE 0 END AS hypertension_ind,
+
+        CASE WHEN rm."hypertension" = TRUE THEN 1 ELSE 0 END AS hypertension_ind,
         NULL::numeric AS systolic_blood_pressure_val,
         NULL::numeric AS diastolic_blood_pressure_val,
-        CASE WHEN rm.""Type II Diabetes"" = TRUE THEN 1 ELSE 0 END AS diabetes_ind,
+
+        CASE WHEN rm."Type II Diabetes" = TRUE THEN 1 ELSE 0 END AS diabetes_ind,
         NULL::numeric AS hba1c_val,
-        CASE WHEN rp.""physiology-bmi-bmi"" >= 25 THEN 1 ELSE 0 END AS obese_ind,
+
+        CASE WHEN rp."physiology-bmi-bmi" >= 25 THEN 1 ELSE 0 END AS obese_ind,
+
         CASE
-            WHEN rp.""physiology-bmi-bmi"" < 23 THEN 'Normal'
-            WHEN rp.""physiology-bmi-bmi"" >= 23
-                 AND rp.""physiology-bmi-bmi"" < 25 THEN 'Overweight'
+            WHEN rp."physiology-bmi-bmi" < 23 THEN 'Normal'
+            WHEN rp."physiology-bmi-bmi" >= 23
+                 AND rp."physiology-bmi-bmi" < 25 THEN 'Overweight'
             ELSE 'Obese'
         END AS bmi_category_desc,
-        ROUND(rp.""physiology-bmi-bmi""::numeric, 2) AS bmi_val,
-        CASE WHEN rm.""Hyperlipidemia/Cholesterol"" = TRUE THEN 1 ELSE 0 END AS hyperlipidaemia_ind,
+
+        ROUND(rp."physiology-bmi-bmi"::numeric, 2) AS bmi_val,
+
+        CASE WHEN rm."Hyperlipidemia/Cholesterol" = TRUE THEN 1 ELSE 0 END AS hyperlipidaemia_ind,
+
         NULL::numeric AS total_cholesterol_val,
         NULL::numeric AS triglyceride_val
+
     FROM response_medical_mastersheet rm
     INNER JOIN response_physiology rp
         ON rm.response_id = rp.response_id
@@ -334,13 +382,14 @@ control_raw AS (
     INNER JOIN sequence_shotgun ss
         ON ss.kit_id = meta.kit_id
     WHERE
-        rm.""Hyperlipidemia/Cholesterol"" = FALSE
+        rm."Hyperlipidemia/Cholesterol" = FALSE
         AND rm.hypertension = FALSE
-        AND rm.""Type II Diabetes"" = FALSE
-        AND rp.""physiology-bmi-bmi"" < 23      -- strictly BMI < 23
-        AND rp.""physiology-bmi-bmi"" >= 18.5   -- drop BMI < 18.5
+        AND rm."Type II Diabetes" = FALSE
+        AND rp."physiology-bmi-bmi" < 23      -- strictly BMI < 23
+        AND rp."physiology-bmi-bmi" >= 18.5   -- drop BMI < 18.5
         AND ss.sequence_number <> 'Not sent for sequencing'
 ),
+
 -- ensure each CONTROL SUBJECT appears only once
 control_unique AS (
     SELECT *
@@ -355,6 +404,7 @@ control_unique AS (
     ) x
     WHERE control_subject_rn = 1
 ),
+
 ---------------------------------------------------------------------
 -- 6. 1:1 MATCHING BY GENDER, RACE, SORTED AGE (NO REUSE)
 ---------------------------------------------------------------------
@@ -367,6 +417,7 @@ unhealthy_indexed AS (
         ) AS unhealthy_rn
     FROM unhealthy_unique u
 ),
+
 control_indexed AS (
     SELECT
         c.*,
@@ -376,6 +427,7 @@ control_indexed AS (
         ) AS control_rn
     FROM control_unique c
 ),
+
 matched AS (
     SELECT
         u.subject_id,
@@ -396,6 +448,7 @@ matched AS (
         u.triglyceride_val,
         u.unhealthy_ind,
         u.dataset_source,
+
         c.subject_id        AS control_subject_id,
         c.gender            AS control_gender,
         c.age_no            AS control_age_no,
@@ -412,12 +465,14 @@ matched AS (
         c.hyperlipidaemia_ind AS control_hyperlipidaemia_ind,
         c.total_cholesterol_val AS control_total_cholesterol_val,
         c.triglyceride_val  AS control_triglyceride_val
+
     FROM unhealthy_indexed u
     INNER JOIN control_indexed c
         ON u.gender = c.gender
        AND UPPER(u.race) = UPPER(c.race)
        AND u.unhealthy_rn = c.control_rn      -- 1:1 pairing within gender+race
 ),
+
 ---------------------------------------------------------------------
 -- 7. FINAL: UNHEALTHY ROWS + APPENDED CONTROL ROWS
 ---------------------------------------------------------------------
@@ -446,7 +501,9 @@ final AS (
         'Unhealthy' AS health_status,
         dataset_source
     FROM matched
+
     UNION ALL
+
     -- matched healthy controls appended at the bottom
     SELECT
         control_subject_id        AS subject_id,
@@ -472,6 +529,7 @@ final AS (
         'AMD_CONTROL'             AS dataset_source
     FROM matched
 )
+
 -- FINAL OUTPUT: METADATA COHORT ONLY (NO SEQUENCE TABLE CHECK)
 SELECT *
 FROM final;"
