@@ -1,6 +1,8 @@
 # All imports at the top
 import os
 from pathlib import Path
+import logging
+from urllib.parse import urlparse
 from dotenv import load_dotenv
 from vanna import Agent
 from vanna.core.registry import ToolRegistry
@@ -16,6 +18,7 @@ from seed_rag import seed_on_start
 
 # Load environment variables from .env if present
 load_dotenv()
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 
 # Configure your LLM
 llm = OpenAILlmService(
@@ -25,13 +28,34 @@ llm = OpenAILlmService(
 
 # Configure your database
 database_url = os.getenv("DATABASE_URL")
+used_fallback_db_url = False
 if not database_url:
+    used_fallback_db_url = True
     pg_user = os.getenv("POSTGRES_USER", "user")
     pg_password = os.getenv("POSTGRES_PASSWORD", "password")
     pg_host = os.getenv("POSTGRES_HOST", "localhost")
     pg_port = os.getenv("POSTGRES_PORT", "5432")
     pg_database = os.getenv("POSTGRES_DB", "dbname")
     database_url = f"postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_database}"
+
+# If using fallback DB URL, attempt a simple connection to surface errors early
+if used_fallback_db_url:
+    try:
+        import psycopg
+        with psycopg.connect(database_url) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+        logging.info("Database connection successful using fallback settings.")
+    except Exception as exc:
+        parsed = urlparse(database_url)
+        db_name = parsed.path.lstrip("/")
+        logging.error(
+            "Database connection FAILED using fallback settings (host=%s, port=%s, db=%s): %s",
+            parsed.hostname,
+            parsed.port,
+            db_name,
+            exc,
+        )
 
 db_tool = RunSqlTool(sql_runner=PostgresRunner(connection_string=database_url))
 

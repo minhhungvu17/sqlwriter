@@ -1,5 +1,4 @@
 # Core app and framework
-vanna[fastapi,openai,postgres,chromadb]
 fastapi
 uvicorn[standard]
 

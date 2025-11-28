@@ -10,7 +10,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential libpq-dev curl ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Install local vanna from repo (instead of PyPI)
+COPY ./vanna /app/vanna
+RUN pip install --no-cache-dir -e /app/vanna[fastapi,openai,postgres,chromadb]
+
+# Install remaining Python dependencies
 COPY ./requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
