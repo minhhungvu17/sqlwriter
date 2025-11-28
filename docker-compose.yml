@@ -10,10 +10,10 @@ services:
       - ./.env
     environment:
       - PORT=8001
-      - VANNA_CHROMA_DIR=/data/chroma_db
+      - VANNA_CHROMA_DIR=/opt/sqlwriter/chroma_db
     ports:
       - "8001:8001"
     volumes:
-      - ./chroma_db_data:/data/chroma_db
+      - ./chroma_db_data:/opt/sqlwriter/chroma_db
     restart: unless-stopped
 
