@@ -2000,9 +2000,23 @@ export class ComponentManager {
 
     if (statusBar) {
       const { status, message, detail } = component.data || {};
+      const msgText = (message ?? '').toString();
+      const isFoundSimilar =
+        /\bfound\s+\d+\s+similar\s+pattern(?:s)?\b/i.test(msgText) ||
+        /\bfound\s+similar\s+pattern(?:s)?\b/i.test(msgText) ||
+        /\bsimilar\s+pattern(?:s)?\s+found\b/i.test(msgText);
+
+      // If backend sends a success with "Found ... similar pattern", override to clean success text
+      if (status === 'success' && isFoundSimilar) {
+        (statusBar as any).status = 'success';
+        (statusBar as any).message = ''; // derived "Response complete" will be shown by the component
+        (statusBar as any).detail = detail || '';
+        return;
+      }
+
       // Set properties directly on the Lit component
       (statusBar as any).status = status;
-      (statusBar as any).message = message || '';
+      (statusBar as any).message = msgText;
       (statusBar as any).detail = detail || '';
     }
   }

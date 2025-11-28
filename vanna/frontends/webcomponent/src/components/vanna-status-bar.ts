@@ -460,20 +460,22 @@ export class VannaStatusBar extends LitElement {
       // idle or unknown -> render nothing
       return html``;
     }
-    
   
-    // If status is success and incoming message mentions "Found", skip display
-    if (this.status === 'success' && /found/i.test(this.message ?? '')) {
-      console.log('displayMessage', this.message);
+    // If status is success and incoming message mentions "Found" or "similar pattern", skip display entirely
+    const incomingMessage = this.message?.toString() ?? '';
+    if (
+      this.status === 'success' &&
+      (/\bfound\b/i.test(incomingMessage) || /similar\s+pattern/i.test(incomingMessage))
+    ) {
       return html``;
     }
-    else {
-      return html`
+
+    return html`
       <div class="status-content">
         <span class="status-text">${displayMessage}</span>
       </div>
     `;
-    }
+    
 
   }
 }

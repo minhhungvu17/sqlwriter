@@ -1128,15 +1128,30 @@ export class VannaChat extends LitElement {
       composed: true
     }));
 
-    console.log('Processing chunk:', chunk); // Debug log
-
     // Handle rich components via ComponentManager
     if (chunk.rich && this.componentManager) {
-      console.log('Processing rich component via ComponentManager:', chunk.rich); // Debug log
+      
+      // Sanitize status bar messages to hide "Found ... similar pattern(s)" success notices
+      const sanitizeStatusBar = (rc: any) => {
+        try {
+          if (rc && rc.type === 'status_bar_update' && rc.data) {
+            const msg = (rc.data.message ?? '').toString();
+            const stat = rc.data.status;
+            console.log('SHOW LOG:', msg); // Debug log
+            if (stat === 'success' && (/\bfound\b/i.test(msg) && /similar\s*pattern/i.test(msg))) {
+              rc.data.message = '';
+            }
+          }
+        } catch {
+          // no-op
+        }
+      };
+      sanitizeStatusBar(chunk.rich);
       
       if (chunk.rich.id && chunk.rich.lifecycle) {
         // Standard rich component with lifecycle
         const component = chunk.rich as RichComponent;
+        sanitizeStatusBar(component);
         const update = {
           operation: chunk.rich.lifecycle as any,
           target_id: chunk.rich.id,
@@ -1146,10 +1161,12 @@ export class VannaChat extends LitElement {
         this.componentManager.processUpdate(update);
       } else if (chunk.rich.type === 'component_update') {
         // Component update format
+        sanitizeStatusBar(chunk.rich);
         this.componentManager.processUpdate(chunk.rich as any);
       } else {
         // Generic rich component
         const component = chunk.rich as RichComponent;
+        sanitizeStatusBar(component);
         const update = {
           operation: 'create' as const,
           target_id: component.id || `component-${Date.now()}`,
