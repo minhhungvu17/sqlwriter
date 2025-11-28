@@ -251,8 +251,10 @@ class ToolRegistry:
             result = await tool.execute(context, final_args)
             execution_time_ms = (time.perf_counter() - start_time) * 1000
 
-            # Add execution time to metadata
+            # Add common metadata
             result.metadata["execution_time_ms"] = execution_time_ms
+            result.metadata.setdefault("tool_name", tool_call.name)
+            result.metadata.setdefault("tool_call_id", tool_call.id)
 
             # Audit tool result
             if (

@@ -14,6 +14,7 @@ from vanna.integrations.openai import OpenAILlmService
 from vanna.integrations.postgres import PostgresRunner
 from vanna.integrations.chromadb import ChromaAgentMemory
 from vanna.core.agent.config import AgentConfig
+from vanna.core.lifecycle import LifecycleHook
 from seed_tools import SeedReferenceTool
 from seed_rag import seed_on_start
 
@@ -87,12 +88,38 @@ tools.register_local_tool(SeedReferenceTool(), access_groups=['admin', 'user'])
 # Configure agent behavior (increase tool running number via env)
 max_tool_iterations = int(os.getenv("VANNA_MAX_TOOL_ITERATIONS", "20"))
 
+class SqlResultLoggingHook(LifecycleHook):
+    async def after_tool(self, result):
+        try:
+            tool_name = result.metadata.get("tool_name")
+            if tool_name == "run_sql":
+                query_type = result.metadata.get("query_type")
+                row_count = result.metadata.get("row_count")
+                rows_affected = result.metadata.get("rows_affected")
+                output_file = result.metadata.get("output_file")
+                if query_type == "SELECT":
+                    logging.info(
+                        "SQL result: SELECT rows=%s file=%s",
+                        row_count,
+                        output_file or "(none)",
+                    )
+                else:
+                    logging.info(
+                        "SQL result: %s rows_affected=%s",
+                        query_type,
+                        rows_affected,
+                    )
+        except Exception as e:
+            logging.debug("SqlResultLoggingHook error: %s", e)
+        return None
+
 agent = Agent(
     llm_service=llm,
     tool_registry=tools,
     user_resolver=user_resolver,
     agent_memory=agent_memory,
-    config=AgentConfig(max_tool_iterations=max_tool_iterations)
+    config=AgentConfig(max_tool_iterations=max_tool_iterations),
+    lifecycle_hooks=[SqlResultLoggingHook()]
 )
 
 # Seed CSV-based references into memory (idempotent via stable IDs)

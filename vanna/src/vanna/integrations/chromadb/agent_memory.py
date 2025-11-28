@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+import logging
 
 try:
     import chromadb
@@ -32,6 +33,8 @@ from vanna.core.tool import ToolContext
 
 class ChromaAgentMemory(AgentMemory):
     """ChromaDB-based implementation of AgentMemory."""
+
+    _logger = logging.getLogger(__name__)
 
     def __init__(
         self,
@@ -128,6 +131,13 @@ class ChromaAgentMemory(AgentMemory):
                 ids=[memory_id], documents=[question], metadatas=[memory_data]
             )
 
+        self._logger.debug(
+            "AgentMemory.save_tool_usage tool=%s success=%s question=%r args=%s",
+            tool_name,
+            success,
+            question,
+            args,
+        )
         await asyncio.get_event_loop().run_in_executor(self._executor, _save)
 
     async def search_similar_usage(
@@ -194,7 +204,20 @@ class ChromaAgentMemory(AgentMemory):
 
             return search_results
 
-        return await asyncio.get_event_loop().run_in_executor(self._executor, _search)
+        self._logger.debug(
+            "AgentMemory.search_similar_usage question=%r limit=%d threshold=%.2f tool_name_filter=%r",
+            question,
+            limit,
+            similarity_threshold,
+            tool_name_filter,
+        )
+        results = await asyncio.get_event_loop().run_in_executor(
+            self._executor, _search
+        )
+        self._logger.debug(
+            "AgentMemory.search_similar_usage results_count=%d", len(results)
+        )
+        return results
 
     async def get_recent_memories(
         self, context: ToolContext, limit: int = 10
@@ -332,7 +355,19 @@ class ChromaAgentMemory(AgentMemory):
 
             return search_results
 
-        return await asyncio.get_event_loop().run_in_executor(self._executor, _search)
+        self._logger.debug(
+            "AgentMemory.search_text_memories query=%r limit=%d threshold=%.2f",
+            query,
+            limit,
+            similarity_threshold,
+        )
+        results = await asyncio.get_event_loop().run_in_executor(
+            self._executor, _search
+        )
+        self._logger.debug(
+            "AgentMemory.search_text_memories results_count=%d", len(results)
+        )
+        return results
 
     async def get_recent_text_memories(
         self, context: ToolContext, limit: int = 10

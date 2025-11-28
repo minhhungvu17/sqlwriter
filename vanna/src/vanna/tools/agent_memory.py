@@ -136,6 +136,13 @@ class SearchSavedCorrectToolUsesTool(Tool[SearchSavedCorrectToolUsesParams]):
     ) -> ToolResult:
         """Search for similar tool usage patterns."""
         try:
+            logger.debug(
+                "Searching agent memory: question=%r limit=%s threshold=%s tool_name_filter=%r",
+                args.question,
+                args.limit,
+                args.similarity_threshold,
+                args.tool_name_filter,
+            )
             results = await context.agent_memory.search_similar_usage(
                 question=args.question,
                 context=context,
@@ -143,6 +150,7 @@ class SearchSavedCorrectToolUsesTool(Tool[SearchSavedCorrectToolUsesParams]):
                 similarity_threshold=args.similarity_threshold or 0.7,
                 tool_name_filter=args.tool_name_filter,
             )
+            logger.debug("Agent memory returned %d result(s)", len(results))
 
             if not results:
                 no_results_msg = (
