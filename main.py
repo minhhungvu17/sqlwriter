@@ -62,9 +62,16 @@ if used_fallback_db_url:
 db_tool = RunSqlTool(sql_runner=PostgresRunner(connection_string=database_url))
 
 # Configure your agent memory
+persist_dir = os.getenv("VANNA_CHROMA_DIR", "./chroma_db_data")
+collection_name = os.getenv("VANNA_CHROMA_COLLECTION", "vanna_memory")
+try:
+    os.makedirs(persist_dir, exist_ok=True)
+except Exception as e:
+    logging.warning("Could not create Chroma persist directory '%s': %s", persist_dir, e)
+logging.info("Chroma config: persist_directory='%s', collection='%s'", persist_dir, collection_name)
 agent_memory = ChromaAgentMemory(
-    collection_name=os.getenv("VANNA_CHROMA_COLLECTION", "vanna_memory"),
-    persist_directory=os.getenv("VANNA_CHROMA_DIR", "./chroma_db")
+    collection_name=collection_name,
+    persist_directory=persist_dir
 )
 
 # Configure user authentication

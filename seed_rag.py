@@ -71,7 +71,7 @@ def seed_qna(csv_path: Path, persist_directory: str, collection_name: str) -> Tu
 def seed_on_start() -> None:
     """Convenience wrapper to seed using defaults on process start."""
     load_dotenv()
-    persist_directory = os.getenv("VANNA_CHROMA_DIR", "./chroma_db")
+    persist_directory = os.getenv("VANNA_CHROMA_DIR", "./chroma_db_data")
     collection_name = os.getenv("VANNA_CHROMA_COLLECTION", "vanna_memory")
     csv_path = Path(__file__).parent / "business" / "seed_qna.csv"
     if not csv_path.exists():

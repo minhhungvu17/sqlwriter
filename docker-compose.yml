@@ -11,6 +11,8 @@ services:
     environment:
       - PORT=8001
       - VANNA_CHROMA_DIR=/opt/sqlwriter/chroma_db
+      - VANNA_CHROMA_COLLECTION=vanna_memory
+      - LOG_LEVEL=DEBUG
     ports:
       - "8001:8001"
     volumes:
