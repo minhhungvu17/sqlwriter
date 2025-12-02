@@ -1,0 +1,11 @@
+column_name,data_type
+id,uuid
+patient_id,uuid
+year_of_birth,smallint
+age_at_collection,smallint
+bmi,numeric
+collected_at,timestamp without time zone
+height,numeric
+weight,numeric
+gender,character varying
+race,text

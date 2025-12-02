@@ -1,0 +1,7 @@
+column_name,data_type
+fmt_id,text
+fmt_prep,text
+sequence_number,text
+batch,text
+raw_file,text
+processed_url,text

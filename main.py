@@ -4,6 +4,7 @@ from pathlib import Path
 import logging
 from urllib.parse import urlparse
 from dotenv import load_dotenv
+import vanna as vanna_pkg
 from vanna import Agent
 from vanna.core.registry import ToolRegistry
 from vanna.core.user import UserResolver, User, RequestContext
@@ -21,6 +22,23 @@ from seed_rag import seed_on_start
 # Load environment variables from .env if present
 load_dotenv()
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
+
+# Log Vanna package details and default memory search parameters
+try:
+    from vanna.tools.agent_memory import SearchSavedCorrectToolUsesParams
+    default_limit = getattr(SearchSavedCorrectToolUsesParams.__fields__["limit"], "default", 10)  # type: ignore[attr-defined]
+    default_threshold = getattr(SearchSavedCorrectToolUsesParams.__fields__["similarity_threshold"], "default", 0.7)  # type: ignore[attr-defined]
+except Exception:
+    default_limit = 10
+    default_threshold = 0.7
+
+logging.info(
+    "Vanna version=%s path=%s | memory_search_defaults: limit=%s threshold=%s",
+    getattr(vanna_pkg, "__version__", "unknown"),
+    getattr(vanna_pkg, "__file__", "(unknown)"),
+    default_limit,
+    default_threshold,
+)
 
 # Configure your LLM
 llm = OpenAILlmService(
@@ -79,6 +97,7 @@ class SimpleUserResolver(UserResolver):
     async def resolve_user(self, request_context: RequestContext) -> User:
         user_email = request_context.get_cookie('vanna_email') or 'minhhung.vu@amili.asia'
         group = 'admin' if user_email == 'minhhung.vu@amili.asia' else 'user'
+        logging.info("Resolved user: email=%s group=%s", user_email, group)
         return User(id=user_email, email=user_email, group_memberships=[group])
 
 user_resolver = SimpleUserResolver()

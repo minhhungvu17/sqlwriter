@@ -1,0 +1,8 @@
+column_name,data_type
+Type II Diabetes,boolean
+Hyperlipidemia/Cholesterol,boolean
+hypertension,boolean
+probiotic,boolean
+hyperthyroidism,boolean
+ibd,boolean
+response_id,text

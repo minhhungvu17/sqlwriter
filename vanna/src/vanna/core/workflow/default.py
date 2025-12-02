@@ -68,6 +68,7 @@ class DefaultWorkflowHandler(WorkflowHandler):
                     "\n**🔒 Admin Commands**\n"
                     "- `/status` - Check setup status\n"
                     "- `/memories` - View and manage recent memories\n"
+                    "- `/seed_stats` - Check seed_qna.csv statistics\n"
                     "- `/delete [id]` - Delete a memory by ID\n"
                 )
 
@@ -151,6 +152,26 @@ class DefaultWorkflowHandler(WorkflowHandler):
                 )
             memory_id = message.strip()[8:].strip()  # Extract ID after "/delete "
             return await self._delete_memory(agent, user, conversation, memory_id)
+
+        # Handle seed statistics command (admin-only)
+        if message.strip().lower() in ["/seed_stats", "seed_stats", "/check_seeds", "check_seeds"]:
+            # Check if user is admin
+            if "admin" not in user.group_memberships:
+                return WorkflowResult(
+                    should_skip_llm=True,
+                    components=[
+                        UiComponent(
+                            rich_component=RichTextComponent(
+                                content="# 🔒 Access Denied\n\n"
+                                "The `/seed_stats` command is only available to administrators.\n\n"
+                                "If you need access to seed statistics, please contact your system administrator.",
+                                markdown=True,
+                            ),
+                            simple_component=None,
+                        )
+                    ],
+                )
+            return await self._get_seed_statistics(agent, user, conversation)
 
         # Don't handle other messages, pass to LLM
         return WorkflowResult(should_skip_llm=False)
@@ -764,6 +785,117 @@ class DefaultWorkflowHandler(WorkflowHandler):
                         )
                     ],
                 )
+
+        except Exception as e:
+            traceback.print_exc()
+            return WorkflowResult(
+                should_skip_llm=True,
+                components=[
+                    UiComponent(
+                        rich_component=RichTextComponent(
+                            content=f"# ❌ Error Deleting Memory\n\n"
+                            f"Failed to delete memory: {str(e)}",
+                            markdown=True,
+                        ),
+                        simple_component=None,
+                    )
+                ],
+            )
+
+    async def _get_seed_statistics(
+        self, agent: "Agent", user: "User", conversation: "Conversation"
+    ) -> WorkflowResult:
+        """Get and display seed statistics from agent memory."""
+        try:
+            # Check if agent has memory capability
+            if not hasattr(agent, "agent_memory") or agent.agent_memory is None:
+                return WorkflowResult(
+                    should_skip_llm=True,
+                    components=[
+                        UiComponent(
+                            rich_component=RichTextComponent(
+                                content="# ⚠️ No Memory System\n\n"
+                                "Agent memory is not configured. Seed statistics are not available.\n\n"
+                                "To enable memory, configure an AgentMemory implementation in your agent setup.",
+                                markdown=True,
+                            ),
+                            simple_component=None,
+                        )
+                    ],
+                )
+
+            # Check if memory backend supports seed statistics
+            if not hasattr(agent.agent_memory, "get_seed_statistics"):
+                return WorkflowResult(
+                    should_skip_llm=True,
+                    components=[
+                        UiComponent(
+                            rich_component=RichTextComponent(
+                                content="# ⚠️ Feature Not Available\n\n"
+                                "Seed statistics are not available for this memory backend.\n\n"
+                                "This feature is currently only supported for ChromaDB-based memory.",
+                                markdown=True,
+                            ),
+                            simple_component=None,
+                        )
+                    ],
+                )
+
+            # Create tool context
+            from vanna.core.tool import ToolContext
+
+            context = ToolContext(
+                user=user,
+                conversation_id=conversation.id,
+                request_id=str(uuid.uuid4()),
+                agent_memory=agent.agent_memory,
+            )
+
+            # Get seed statistics
+            stats = await agent.agent_memory.get_seed_statistics(context)
+
+            # Format the results
+            content = "# 📊 Seed Statistics\n\n"
+            content += f"**Total Tool Memories:** {stats['total_memories']}\n\n"
+            content += f"**From seed_qna.csv:** {stats['seed_memories']}\n\n"
+            content += f"**From other sources:** {stats['other_memories']}\n\n"
+            
+            # Expected count from CSV (536 rows minus header = 535)
+            expected_seeds = 535
+            if stats['seed_memories'] == expected_seeds:
+                content += f"✅ **Status:** All {expected_seeds} seed entries are present!\n\n"
+            elif stats['seed_memories'] > 0:
+                content += f"⚠️ **Status:** Found {stats['seed_memories']} seed entries (expected {expected_seeds})\n\n"
+            else:
+                content += f"❌ **Status:** No seed entries found (expected {expected_seeds})\n\n"
+                content += "**Troubleshooting:**\n"
+                content += "- Check that `seed_on_start()` ran successfully on server startup\n"
+                content += "- Verify `business/seed_qna.csv` exists and has 536 rows\n"
+                content += "- Check ChromaDB persist directory matches configuration\n\n"
+            
+            if stats['sample_seed_ids']:
+                content += "**Sample Seed Memory IDs (first 5):**\n"
+                for i, seed_id in enumerate(stats['sample_seed_ids'], 1):
+                    content += f"{i}. `{seed_id}`\n"
+                content += "\n"
+            
+            content += "**Note:** Use `/memories` to view recent memories or search for specific patterns."
+
+            return WorkflowResult(
+                should_skip_llm=True,
+                components=[
+                    UiComponent(
+                        rich_component=CardComponent(
+                            title="Seed Statistics",
+                            content=content,
+                            markdown=True,
+                            icon="📊",
+                            status="success" if stats['seed_memories'] == expected_seeds else "warning" if stats['seed_memories'] > 0 else "error",
+                        ),
+                        simple_component=None,
+                    )
+                ],
+            )
 
         except Exception as e:
             traceback.print_exc()

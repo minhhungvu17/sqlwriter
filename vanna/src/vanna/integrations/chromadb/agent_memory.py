@@ -217,6 +217,19 @@ class ChromaAgentMemory(AgentMemory):
         self._logger.debug(
             "AgentMemory.search_similar_usage results_count=%d", len(results)
         )
+        if results:
+            self._logger.info(
+                "Memory retrieval: found %d similar pattern(s) for question=%r (threshold=%.2f)",
+                len(results),
+                question[:100] + "..." if len(question) > 100 else question,
+                similarity_threshold,
+            )
+        else:
+            self._logger.info(
+                "Memory retrieval: no similar patterns found for question=%r (threshold=%.2f)",
+                question[:100] + "..." if len(question) > 100 else question,
+                similarity_threshold,
+            )
         return results
 
     async def get_recent_memories(
@@ -453,3 +466,57 @@ class ChromaAgentMemory(AgentMemory):
             return len(ids_to_delete)
 
         return await asyncio.get_event_loop().run_in_executor(self._executor, _clear)
+
+    async def get_seed_statistics(self, context: ToolContext) -> Dict[str, Any]:
+        """Get statistics about seeded memories (admin diagnostic tool).
+        
+        Returns dict with:
+        - total_memories: total count of tool memories (excluding text memories)
+        - seed_memories: count of memories from seed_qna.csv
+        - other_memories: count of memories from other sources
+        - sample_seed_ids: list of first 5 seed memory IDs for verification
+        """
+        def _get_stats():
+            collection = self._get_collection()
+            results = collection.get()
+            
+            if not results["metadatas"] or not results["ids"]:
+                return {
+                    "total_memories": 0,
+                    "seed_memories": 0,
+                    "other_memories": 0,
+                    "sample_seed_ids": [],
+                }
+            
+            total = 0
+            seed_count = 0
+            seed_ids = []
+            
+            for doc_id, metadata in zip(results["ids"], results["metadatas"]):
+                # Skip text memories
+                if metadata.get("is_text_memory"):
+                    continue
+                
+                total += 1
+                
+                # Check if this is a seed memory
+                metadata_json_str = metadata.get("metadata_json", "{}")
+                try:
+                    metadata_dict = json.loads(metadata_json_str)
+                    if metadata_dict.get("seed_source") == "seed_qna.csv":
+                        seed_count += 1
+                        if len(seed_ids) < 5:
+                            seed_ids.append(doc_id)
+                except (json.JSONDecodeError, KeyError):
+                    pass
+            
+            return {
+                "total_memories": total,
+                "seed_memories": seed_count,
+                "other_memories": total - seed_count,
+                "sample_seed_ids": seed_ids,
+            }
+        
+        return await asyncio.get_event_loop().run_in_executor(
+            self._executor, _get_stats
+        )

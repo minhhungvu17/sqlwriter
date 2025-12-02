@@ -1,0 +1,15 @@
+column_name,data_type
+zscore,double precision
+score,double precision
+log2,double precision
+zscore,double precision
+score,double precision
+encounter_id,uuid
+patient_id,uuid
+raw,double precision
+raw,double precision
+log2,double precision
+analysis_id,text
+Report Level 3,text
+batch_id,text
+Report Level 3,text

@@ -1,0 +1,6 @@
+fmt_id,fmt_prep,sequence_number,batch,raw_file,processed_url
+FMT001,A001S001,AML-FMT00101200803,3,s3://amili-analysis-lab/Illumina/backup/archive/Untitled_from_200803_A00232_0062_BHL2YFDRXX-187095912_80 Samples  [3rdRun_NovaSeq_03Aug2020 (60 samples)]/fastq/,s3://amili-global-archive/SHOTGUN/Report/batch_3/AML-FMT00101200803/
+FMT001,A001S002,B002001S002,Batch_MGG2_2,s3://amili-analysis-lab/Macrogen/sequencing-data/MGG22_2_87samples/,s3://amili-global-archive/SHOTGUN/Report/batch_mgg2_2/B002001S002/
+FMT001,A001S003,B002001S003,Batch_MGG2_2,s3://amili-analysis-lab/Macrogen/sequencing-data/MGG22_2_87samples/,s3://amili-global-archive/SHOTGUN/Report/batch_mgg2_2/B002001S003/
+FMT001,A001S004,B002001S004,Batch_MGG2_2,s3://amili-analysis-lab/Macrogen/sequencing-data/MGG22_2_87samples/,s3://amili-global-archive/SHOTGUN/Report/batch_mgg2_2/B002001S004/
+FMT001,A001S005,B002001S005,Batch_MGG2_2,s3://amili-analysis-lab/Macrogen/sequencing-data/batch_mgg2_2-21samples/,s3://amili-global-archive/SHOTGUN/Report/batch_mgg2_2/B002001S005/

@@ -151,6 +151,19 @@ class SearchSavedCorrectToolUsesTool(Tool[SearchSavedCorrectToolUsesParams]):
                 tool_name_filter=args.tool_name_filter,
             )
             logger.debug("Agent memory returned %d result(s)", len(results))
+            if results:
+                logger.info(
+                    "Memory search completed: retrieved %d pattern(s) matching question (limit=%d, threshold=%.2f)",
+                    len(results),
+                    args.limit or 10,
+                    args.similarity_threshold or 0.7,
+                )
+            else:
+                logger.info(
+                    "Memory search completed: no patterns found matching question (limit=%d, threshold=%.2f)",
+                    args.limit or 10,
+                    args.similarity_threshold or 0.7,
+                )
 
             if not results:
                 no_results_msg = (
