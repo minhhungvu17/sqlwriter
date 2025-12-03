@@ -77,7 +77,15 @@ if used_fallback_db_url:
             exc,
         )
 
-db_tool = RunSqlTool(sql_runner=PostgresRunner(connection_string=database_url))
+# Configure PostgresRunner with extended timeouts for long-running queries
+# connect_timeout: 60 seconds to establish connection
+# statement_timeout: 3600000 ms = 1 hour for query execution (set to 0 for no limit)
+postgres_runner = PostgresRunner(
+    connection_string=database_url,
+    connect_timeout=120,  # 60 seconds to establish connection
+    statement_timeout=3600000,  # 1 hour (3600000 ms) for query execution
+)
+db_tool = RunSqlTool(sql_runner=postgres_runner)
 
 # Configure your agent memory
 persist_dir = os.getenv("VANNA_CHROMA_DIR", "./chroma_db_data")
