@@ -184,12 +184,13 @@ class PostgresRunner(SqlRunner):
                 db_info,
             )
 
-            if query_type == "SELECT":
-                # Fetch results for SELECT queries
+            # Decide based on presence of a result set instead of first keyword.
+            # This correctly handles queries starting with WITH that return rows.
+            if cursor.description:
                 logger.debug("Fetching query results from database...")
                 rows = cursor.fetchall()
                 row_count = len(rows) if rows else 0
-                
+
                 logger.info(
                     "SQL query results returned: type=%s db=%s rows=%d columns=%d",
                     query_type,
@@ -197,35 +198,34 @@ class PostgresRunner(SqlRunner):
                     row_count,
                     len(cursor.description) if cursor.description else 0,
                 )
-                
-                if row_count > 0 and cursor.description:
+
+                if row_count > 0:
                     column_names = [desc[0] for desc in cursor.description]
                     logger.debug(
                         "Query result columns: %s",
                         ", ".join(column_names[:10]) + ("..." if len(column_names) > 10 else ""),
                     )
-                
+
+                # Return empty DataFrame if no rows
                 if not rows:
-                    # Return empty DataFrame
                     return pd.DataFrame()
 
                 # Convert rows to list of dictionaries
                 results_data = [dict(row) for row in rows]
                 return pd.DataFrame(results_data)
             else:
-                # For non-SELECT queries (INSERT, UPDATE, DELETE, etc.)
+                # No result set (e.g., DML/DDL). Commit and return rows affected.
                 logger.debug("Committing transaction for %s query...", query_type)
                 conn.commit()
                 rows_affected = cursor.rowcount
-                
+
                 logger.info(
                     "SQL query executed successfully: type=%s db=%s rows_affected=%d",
                     query_type,
                     db_info,
                     rows_affected,
                 )
-                
-                # Return a DataFrame indicating rows affected
+
                 return pd.DataFrame({"rows_affected": [rows_affected]})
 
         except self.psycopg2.OperationalError as e:
