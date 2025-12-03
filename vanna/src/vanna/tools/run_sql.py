@@ -1,6 +1,7 @@
 """Generic SQL query execution tool with dependency injection."""
 
 from typing import Any, Dict, List, Optional, Type, cast
+import logging
 import uuid
 from vanna.core.tool import Tool, ToolContext, ToolResult
 from vanna.components import (
@@ -13,6 +14,8 @@ from vanna.components import (
 from vanna.capabilities.sql_runner import SqlRunner, RunSqlToolArgs
 from vanna.capabilities.file_system import FileSystem
 from vanna.integrations.local import LocalFileSystem
+
+logger = logging.getLogger(__name__)
 
 
 class RunSqlTool(Tool[RunSqlToolArgs]):
@@ -56,15 +59,27 @@ class RunSqlTool(Tool[RunSqlToolArgs]):
     async def execute(self, context: ToolContext, args: RunSqlToolArgs) -> ToolResult:
         """Execute a SQL query using the injected SqlRunner."""
         try:
-            # Use the injected SqlRunner to execute the query
-            df = await self.sql_runner.run_sql(args, context)
-
             # Determine query type
             query_type = args.sql.strip().upper().split()[0]
+            
+            # Truncate SQL for logging
+            sql_preview = args.sql[:200] + "..." if len(args.sql) > 200 else args.sql
+            logger.info(
+                "RunSqlTool: executing query type=%s sql_preview=%r",
+                query_type,
+                sql_preview,
+            )
+            
+            # Use the injected SqlRunner to execute the query
+            df = await self.sql_runner.run_sql(args, context)
 
             if query_type == "SELECT":
                 # Handle SELECT queries with results
                 if df.empty:
+                    logger.info(
+                        "RunSqlTool: query completed type=%s rows=0 (empty result)",
+                        query_type,
+                    )
                     result = "Query executed successfully. No rows returned."
                     ui_component = UiComponent(
                         rich_component=DataFrameComponent(
@@ -87,12 +102,25 @@ class RunSqlTool(Tool[RunSqlToolArgs]):
                     columns = df.columns.tolist()
                     row_count = len(df)
 
+                    logger.info(
+                        "RunSqlTool: query completed type=%s rows=%d columns=%d",
+                        query_type,
+                        row_count,
+                        len(columns),
+                    )
+
                     # Write DataFrame to CSV file for downstream tools
                     file_id = str(uuid.uuid4())[:8]
                     filename = f"query_results_{file_id}.csv"
                     csv_content = df.to_csv(index=False)
                     await self.file_system.write_file(
                         filename, csv_content, context, overwrite=True
+                    )
+                    
+                    logger.info(
+                        "RunSqlTool: results saved to file=%s rows=%d",
+                        filename,
+                        row_count,
                     )
 
                     # Create result text for LLM with truncated results
@@ -128,6 +156,13 @@ class RunSqlTool(Tool[RunSqlToolArgs]):
                 # For non-SELECT queries (INSERT, UPDATE, DELETE, etc.)
                 # The SqlRunner should return a DataFrame with affected row count
                 rows_affected = len(df) if not df.empty else 0
+                
+                logger.info(
+                    "RunSqlTool: query completed type=%s rows_affected=%d",
+                    query_type,
+                    rows_affected,
+                )
+                
                 result = (
                     f"Query executed successfully. {rows_affected} row(s) affected."
                 )

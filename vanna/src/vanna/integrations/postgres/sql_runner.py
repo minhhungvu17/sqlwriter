@@ -1,10 +1,13 @@
 """PostgreSQL implementation of SqlRunner interface."""
 
 from typing import Optional
+import logging
 import pandas as pd
 
 from vanna.capabilities.sql_runner import SqlRunner, RunSqlToolArgs
 from vanna.core.tool import ToolContext
+
+logger = logging.getLogger(__name__)
 
 
 class PostgresRunner(SqlRunner):
@@ -75,6 +78,32 @@ class PostgresRunner(SqlRunner):
         Raises:
             psycopg2.Error: If query execution fails
         """
+        # Extract database info for logging
+        db_info = "datalake postgres"
+        if self.connection_string:
+            # Try to extract host/database from connection string
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(self.connection_string)
+                db_info = f"{parsed.hostname}:{parsed.port or 5432}/{parsed.path.lstrip('/')}"
+            except Exception:
+                pass
+        elif self.connection_params:
+            db_info = f"{self.connection_params.get('host', 'unknown')}:{self.connection_params.get('port', 5432)}/{self.connection_params.get('database', 'unknown')}"
+
+        # Determine query type
+        query_type = args.sql.strip().upper().split()[0]
+        
+        # Truncate SQL for logging (first 200 chars)
+        sql_preview = args.sql[:200] + "..." if len(args.sql) > 200 else args.sql
+        
+        logger.info(
+            "Executing SQL query on datalake postgres db: type=%s db=%s sql_preview=%r",
+            query_type,
+            db_info,
+            sql_preview,
+        )
+
         # Connect to the database using either connection string or parameters
         if self.connection_string:
             conn = self.psycopg2.connect(self.connection_string)
@@ -87,12 +116,18 @@ class PostgresRunner(SqlRunner):
             # Execute the query
             cursor.execute(args.sql)
 
-            # Determine if this is a SELECT query or modification query
-            query_type = args.sql.strip().upper().split()[0]
-
             if query_type == "SELECT":
                 # Fetch results for SELECT queries
                 rows = cursor.fetchall()
+                row_count = len(rows) if rows else 0
+                
+                logger.info(
+                    "SQL query results returned from datalake postgres db: type=%s db=%s rows=%d",
+                    query_type,
+                    db_info,
+                    row_count,
+                )
+                
                 if not rows:
                     # Return empty DataFrame
                     return pd.DataFrame()
@@ -104,6 +139,14 @@ class PostgresRunner(SqlRunner):
                 # For non-SELECT queries (INSERT, UPDATE, DELETE, etc.)
                 conn.commit()
                 rows_affected = cursor.rowcount
+                
+                logger.info(
+                    "SQL query executed on datalake postgres db: type=%s db=%s rows_affected=%d",
+                    query_type,
+                    db_info,
+                    rows_affected,
+                )
+                
                 # Return a DataFrame indicating rows affected
                 return pd.DataFrame({"rows_affected": [rows_affected]})
 
