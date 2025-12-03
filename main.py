@@ -26,8 +26,13 @@ logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 # Log Vanna package details and default memory search parameters
 try:
     from vanna.tools.agent_memory import SearchSavedCorrectToolUsesParams
-    default_limit = getattr(SearchSavedCorrectToolUsesParams.__fields__["limit"], "default", 10)  # type: ignore[attr-defined]
-    default_threshold = getattr(SearchSavedCorrectToolUsesParams.__fields__["similarity_threshold"], "default", 0.7)  # type: ignore[attr-defined]
+    # Use model_fields for Pydantic V2, fallback to __fields__ for V1
+    if hasattr(SearchSavedCorrectToolUsesParams, "model_fields"):
+        default_limit = SearchSavedCorrectToolUsesParams.model_fields["limit"].default if "limit" in SearchSavedCorrectToolUsesParams.model_fields else 10
+        default_threshold = SearchSavedCorrectToolUsesParams.model_fields["similarity_threshold"].default if "similarity_threshold" in SearchSavedCorrectToolUsesParams.model_fields else 0.7
+    else:
+        default_limit = getattr(SearchSavedCorrectToolUsesParams.__fields__["limit"], "default", 10)  # type: ignore[attr-defined]
+        default_threshold = getattr(SearchSavedCorrectToolUsesParams.__fields__["similarity_threshold"], "default", 0.7)  # type: ignore[attr-defined]
 except Exception:
     default_limit = 10
     default_threshold = 0.7
