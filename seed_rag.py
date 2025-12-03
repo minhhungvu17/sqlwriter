@@ -76,6 +76,21 @@ def seed_on_start() -> None:
     csv_path = Path(__file__).parent / "business" / "seed_qna.csv"
     if not csv_path.exists():
         return
+    
+    # Check if ChromaDB already exists and has data
+    try:
+        memory = ChromaAgentMemory(
+            persist_directory=persist_directory, collection_name=collection_name
+        )
+        collection = memory._get_collection()  # type: ignore[attr-defined]
+        existing_count = collection.count()
+        
+        if existing_count > 0:
+            print(f"[seed] ChromaDB already has {existing_count} entries. Running upsert to update/add new entries...")
+    except Exception:
+        # ChromaDB doesn't exist yet or error checking, proceed with seeding
+        pass
+    
     try:
         upserted, total = seed_qna(csv_path, persist_directory, collection_name)
         print(f"[seed] Seeded {upserted}/{total} entries into '{collection_name}' at '{persist_directory}'.")

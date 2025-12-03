@@ -16,6 +16,6 @@ services:
     ports:
       - "8001:8001"
     volumes:
-      - ./chroma_db_data:/opt/sqlwriter/chroma_db
+      - ./chroma_db:/opt/sqlwriter/chroma_db
     restart: unless-stopped
 
