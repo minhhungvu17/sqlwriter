@@ -18,6 +18,7 @@ from vanna.core.agent.config import AgentConfig
 from vanna.core.lifecycle import LifecycleHook
 from seed_tools import SeedReferenceTool
 from seed_rag import seed_on_start
+from custom_workflow import CustomWorkflow
 
 # Load environment variables from .env if present
 load_dotenv()
@@ -152,12 +153,23 @@ class SqlResultLoggingHook(LifecycleHook):
             logging.debug("SqlResultLoggingHook error: %s", e)
         return None
 
+ui_cfg = AgentConfig(max_tool_iterations=max_tool_iterations)
+# Hide tool/memory UI noise in chat
+ui_cfg.ui_features.feature_group_access.update({
+    "tool_names": ["disabled"],
+    "tool_arguments": ["disabled"],
+    "tool_error": ["disabled"],
+    "tool_invocation_message_in_chat": ["disabled"],
+    "memory_detailed_results": ["disabled"],
+})
+
 agent = Agent(
     llm_service=llm,
     tool_registry=tools,
     user_resolver=user_resolver,
     agent_memory=agent_memory,
-    config=AgentConfig(max_tool_iterations=max_tool_iterations),
+    config=ui_cfg,
+    workflow_handler=CustomWorkflow(),
     lifecycle_hooks=[SqlResultLoggingHook()]
 )
 

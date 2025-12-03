@@ -953,36 +953,44 @@ class Agent:
 
                     # Yield tool result
                     if result.ui_component:
-                        # For errors, check if user has access to see error details
-                        if not result.success:
-                            has_tool_error_access = (
-                                self.config.ui_features.can_user_access_feature(
-                                    UiFeature.UI_FEATURE_SHOW_TOOL_ERROR, user
-                                )
-                            )
-
-                            # Audit UI feature access check
-                            if (
-                                self.audit_logger
-                                and self.config.audit_config.enabled
-                                and self.config.audit_config.log_ui_feature_checks
-                            ):
-                                await self.audit_logger.log_ui_feature_access(
-                                    user=user,
-                                    feature_name=UiFeature.UI_FEATURE_SHOW_TOOL_ERROR,
-                                    access_granted=has_tool_error_access,
-                                    required_groups=self.config.ui_features.feature_group_access.get(
-                                        UiFeature.UI_FEATURE_SHOW_TOOL_ERROR, []
-                                    ),
-                                    conversation_id=conversation.id,
-                                    request_id=request_id,
+                        # Suppress chat UI for internal/memory tools; show only final results
+                        suppress_tool_ui = tool_call.name in [
+                            "search_saved_correct_tool_uses",
+                            "save_question_tool_args",
+                            "save_text_memory",
+                            "get_seed_sql_references",
+                        ]
+                        if not suppress_tool_ui:
+                            # For errors, check if user has access to see error details
+                            if not result.success:
+                                has_tool_error_access = (
+                                    self.config.ui_features.can_user_access_feature(
+                                        UiFeature.UI_FEATURE_SHOW_TOOL_ERROR, user
+                                    )
                                 )
 
-                            if has_tool_error_access:
+                                # Audit UI feature access check
+                                if (
+                                    self.audit_logger
+                                    and self.config.audit_config.enabled
+                                    and self.config.audit_config.log_ui_feature_checks
+                                ):
+                                    await self.audit_logger.log_ui_feature_access(
+                                        user=user,
+                                        feature_name=UiFeature.UI_FEATURE_SHOW_TOOL_ERROR,
+                                        access_granted=has_tool_error_access,
+                                        required_groups=self.config.ui_features.feature_group_access.get(
+                                            UiFeature.UI_FEATURE_SHOW_TOOL_ERROR, []
+                                        ),
+                                        conversation_id=conversation.id,
+                                        request_id=request_id,
+                                    )
+
+                                if has_tool_error_access:
+                                    yield result.ui_component
+                            else:
+                                # Success results are always shown if they exist (except suppressed tools)
                                 yield result.ui_component
-                        else:
-                            # Success results are always shown if they exist
-                            yield result.ui_component
 
                     # Collect tool result data
                     tool_results.append(
