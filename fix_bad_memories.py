@@ -134,7 +134,7 @@ def main():
         print("\nError: Must specify either --dry-run or --delete")
         sys.exit(1)
     
-    persist_directory = args.persist_dir or os.getenv("VANNA_CHROMA_DIR", "./chroma_db_data")
+    persist_directory = args.persist_dir or os.getenv("VANNA_CHROMA_DIR", "./chroma_db")
     collection_name = args.collection or os.getenv("VANNA_CHROMA_COLLECTION", "vanna_memory")
     
     print(f"Searching for bad memories in: {persist_directory}")

@@ -93,7 +93,7 @@ postgres_runner = PostgresRunner(
 db_tool = RunSqlTool(sql_runner=postgres_runner)
 
 # Configure your agent memory
-persist_dir = os.getenv("VANNA_CHROMA_DIR", "./chroma_db_data")
+persist_dir = os.getenv("VANNA_CHROMA_DIR", "./chroma_db")
 collection_name = os.getenv("VANNA_CHROMA_COLLECTION", "vanna_memory")
 try:
     os.makedirs(persist_dir, exist_ok=True)
