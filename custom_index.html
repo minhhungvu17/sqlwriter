@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI SQL Writer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- VannaComponentScript -->
+    <style>
+        body {
+            background: linear-gradient(to bottom, #e7e1cf, #ffffff, #e7e1cf);
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        #appLayout {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+        #leftSidebar {
+            width: 260px;
+            min-width: 260px;
+            max-width: 260px;
+            background: white;
+            border-right: 1px solid #e5e7ea;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            z-index: 100;
+            flex-shrink: 0;
+        }
+        #chatArea {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+        vanna-chat {
+            width: 100%;
+            height: 100%;
+            display: block;
+            box-sizing: border-box;
+            position: relative !important;
+            max-width: 100%;
+        }
+        /* Prevent chatbox from expanding beyond its container */
+        #chatArea {
+            overflow: hidden;
+            max-width: calc(100vw - 260px);
+        }
+        .sidebar-section {
+            padding: 16px;
+            border-bottom: 1px solid #e5e7ea;
+            overflow-y: auto;
+        }
+        .sidebar-section:last-child {
+            border-bottom: none;
+        }
+        .sidebar-section h3 {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #4d3c88;
+            margin: 0 0 12px 0;
+        }
+        .thread-item, .favorite-item {
+            padding: 8px 12px;
+            margin-bottom: 4px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border: 1px solid transparent;
+        }
+        .thread-item:hover, .favorite-item:hover {
+            background: #f2e7fa;
+        }
+        .thread-item.active {
+            background: #ED288E10;
+            border-color: #ED288E55;
+        }
+        .thread-title {
+            font-weight: 600;
+            font-size: 13px;
+            color: #220878;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .thread-preview {
+            font-size: 11px;
+            color: #666;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .favorite-title {
+            font-weight: 600;
+            font-size: 13px;
+            color: #220878;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        .favorite-type {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: #ED288E15;
+            color: #a43977;
+        }
+        .favorite-preview {
+            font-size: 11px;
+            color: #666;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .btn-delete {
+            padding: 4px 8px;
+            font-size: 10px;
+            border-radius: 4px;
+            border: 1px solid #e5e7ea;
+            background: white;
+            color: #666;
+            cursor: pointer;
+        }
+        .btn-delete:hover {
+            background: #fee;
+            color: #c00;
+        }
+        .empty-state {
+            color: #777;
+            font-size: 11px;
+            padding: 12px;
+            text-align: center;
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .btn-new {
+            padding: 4px 8px;
+            font-size: 10px;
+            border-radius: 4px;
+            border: 1px solid #ED288E55;
+            background: #ED288E15;
+            color: #a43977;
+            cursor: pointer;
+        }
+        .btn-new:hover {
+            background: #ED288E25;
+        }
+    </style>
+</head>
+<body>
+    <div id="appLayout">
+        <div id="leftSidebar">
+            <div class="sidebar-section" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+                <div class="section-header">
+                    <h3>Chat History</h3>
+                    <button class="btn-new" onclick="createNewThread()">+ New</button>
+                </div>
+                <div id="threadsList" style="flex: 1; overflow-y: auto;">
+                    <div class="empty-state">No chat history</div>
+                </div>
+            </div>
+            <div class="sidebar-section" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+                <div class="section-header">
+                    <h3>Saved SQL</h3>
+                </div>
+                <div id="favoritesList" style="flex: 1; overflow-y: auto;">
+                    <div class="empty-state">No saved SQL</div>
+                </div>
+            </div>
+        </div>
+        <div id="chatArea">
+            <vanna-chat
+                id="vchat"
+                title="AI SQL Writer"
+                api-base=""
+                sse-endpoint="/api/vanna/v2/chat_sse"
+                ws-endpoint="/api/vanna/v2/chat_websocket"
+                poll-endpoint="/api/vanna/v2/chat_poll">
+            </vanna-chat>
+        </div>
+    </div>
+
+    <script>
+        let threads = [];
+        let favorites = [];
+        let currentThreadId = null;
+
+        function uid() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        async function apiCall(endpoint, options = {}) {
+            const response = await fetch(endpoint, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers,
+                },
+            });
+            if (!response.ok) {
+                throw new Error(`API error: ${response.statusText}`);
+            }
+            return response.json();
+        }
+
+        async function loadThreads() {
+            try {
+                const data = await apiCall('/api/chat/threads');
+                threads = data.threads || [];
+                renderThreads();
+            } catch (error) {
+                console.error('Error loading threads:', error);
+            }
+        }
+
+        function renderThreads() {
+            const container = document.getElementById('threadsList');
+            if (threads.length === 0) {
+                container.innerHTML = '<div class="empty-state">No chat history</div>';
+                return;
+            }
+            container.innerHTML = threads.map(thread => {
+                const preview = thread.preview || '';
+                return `
+                    <div class="thread-item ${thread.id === currentThreadId ? 'active' : ''}" onclick="selectThread('${thread.id}')">
+                        <div class="thread-title">${escapeHtml(thread.title)}</div>
+                        <div class="thread-preview">${escapeHtml(preview)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function formatThreadTitle() {
+            const now = new Date();
+            const date = now.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+            });
+            const time = now.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: true 
+            });
+            return `${date} ${time}`;
+        }
+
+        async function createNewThread() {
+            const threadId = uid();
+            const title = formatThreadTitle();
+            try {
+                await apiCall('/api/chat/threads', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        id: threadId,
+                        title: title,
+                    }),
+                });
+                currentThreadId = threadId;
+                await loadThreads();
+                selectThread(threadId);
+            } catch (error) {
+                console.error('Error creating thread:', error);
+                alert('Failed to create thread');
+            }
+        }
+
+        async function selectThread(threadId) {
+            currentThreadId = threadId;
+            renderThreads();
+            // Note: vanna-chat manages its own conversationId internally
+            // For now, we'll just track which thread is selected for display purposes
+            // Future enhancement: could reload page or reset chat component with thread messages
+        }
+
+        async function loadFavorites() {
+            try {
+                const data = await apiCall('/api/chat/favorites');
+                favorites = data.favorites || [];
+                renderFavorites();
+            } catch (error) {
+                console.error('Error loading favorites:', error);
+            }
+        }
+
+        function renderFavorites() {
+            const container = document.getElementById('favoritesList');
+            if (favorites.length === 0) {
+                container.innerHTML = '<div class="empty-state">No saved SQL</div>';
+                return;
+            }
+            container.innerHTML = favorites.filter(fav => fav.type === 'sql').map(fav => {
+                const preview = fav.payload.length > 50 
+                    ? fav.payload.substring(0, 50) + '...' 
+                    : fav.payload;
+                return `
+                    <div class="favorite-item">
+                        <div class="favorite-title">
+                            <span>${escapeHtml(fav.title)}</span>
+                            <span class="favorite-type">${fav.type.toUpperCase()}</span>
+                        </div>
+                        <div class="favorite-preview">${escapeHtml(preview)}</div>
+                        <div style="display: flex; gap: 4px; margin-top: 4px;">
+                            <button class="btn-delete" onclick="useFavorite('${fav.id}')" title="Use">Use</button>
+                            <button class="btn-delete" onclick="deleteFavorite('${fav.id}')" title="Delete">🗑</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function useFavorite(favoriteId) {
+            const fav = favorites.find(f => f.id === favoriteId);
+            if (!fav) return;
+            const chat = document.getElementById('vchat');
+            if (chat) {
+                if (chat.setInput) {
+                    chat.setInput(fav.payload);
+                } else {
+                    const input = chat.shadowRoot?.querySelector('textarea, input[type="text"]') 
+                        || chat.querySelector('textarea, input[type="text"]');
+                    if (input) {
+                        input.value = fav.payload;
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                }
+            }
+        }
+
+        async function deleteFavorite(favoriteId) {
+            if (!confirm('Delete this saved SQL?')) return;
+            try {
+                await apiCall(`/api/chat/favorites/${favoriteId}`, {
+                    method: 'DELETE',
+                });
+                await loadFavorites();
+            } catch (error) {
+                console.error('Error deleting favorite:', error);
+                alert('Failed to delete favorite');
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function adjustChatPosition() {
+            const chat = document.getElementById('vchat');
+            if (!chat) return;
+            
+            // Check if chat is minimized or maximized
+            const isMinimized = chat.classList.contains('minimized');
+            const isMaximized = chat.classList.contains('maximized');
+            
+            const sidebarWidth = 260;
+            
+            const sidebar = document.getElementById('leftSidebar');
+            const actualSidebarWidth = sidebar ? sidebar.offsetWidth : 260;
+            
+            if (isMinimized || isMaximized) {
+                // Force fixed positioning and adjust left position to account for sidebar
+                const targetLeft = actualSidebarWidth + 20;
+                chat.style.setProperty('position', 'fixed', 'important');
+                chat.style.setProperty('left', `${targetLeft}px`, 'important');
+                chat.style.setProperty('z-index', '50', 'important');
+                
+                // For maximized, also set right to prevent overflow
+                if (isMaximized) {
+                    chat.style.setProperty('right', '24px', 'important');
+                } else {
+                    chat.style.removeProperty('right');
+                }
+            } else {
+                // Reset to relative positioning when in normal state
+                chat.style.removeProperty('position');
+                chat.style.removeProperty('left');
+                chat.style.removeProperty('right');
+                chat.style.removeProperty('z-index');
+                
+                // Ensure it stays within chatArea bounds
+                const chatArea = document.getElementById('chatArea');
+                if (chatArea) {
+                    const maxWidth = window.innerWidth - actualSidebarWidth;
+                    chat.style.setProperty('max-width', `${maxWidth}px`, 'important');
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadThreads();
+            loadFavorites();
+            
+            const chat = document.getElementById('vchat');
+            if (chat) {
+                try {
+                    chat.showProgress = false;
+                    chat.startingState = 'maximized';
+                    chat.windowState = 'maximized';
+                    if (chat.maximizeWindow) {
+                        chat.maximizeWindow();
+                    }
+                    
+                    // Monitor for state changes
+                    const observer = new MutationObserver(() => {
+                        adjustChatPosition();
+                    });
+                    
+                    // Observe class changes on the chat element
+                    observer.observe(chat, {
+                        attributes: true,
+                        attributeFilter: ['class'],
+                        subtree: false
+                    });
+                    
+                    // Also observe shadow DOM if accessible
+                    if (chat.shadowRoot) {
+                        observer.observe(chat.shadowRoot, {
+                            childList: true,
+                            subtree: true
+                        });
+                    }
+                    
+                    // Initial adjustment
+                    setTimeout(adjustChatPosition, 100);
+                    setInterval(adjustChatPosition, 500);
+                } catch (e) {
+                    console.warn('Could not configure vanna-chat:', e);
+                }
+            }
+
+            const chatElement = document.getElementById('vchat');
+            if (chatElement) {
+                // Create or get current thread when first message is sent
+                let messageCount = 0;
+                
+                chatElement.addEventListener('message-sent', async (event) => {
+                    const message = event.detail?.message;
+                    if (message) {
+                        messageCount++;
+                        // Create thread on first message if none exists
+                        if (!currentThreadId) {
+                            await createNewThread();
+                        }
+                        if (currentThreadId) {
+                            try {
+                                await apiCall(`/api/chat/threads/${currentThreadId}/messages`, {
+                                    method: 'POST',
+                                    body: JSON.stringify({
+                                        id: uid(),
+                                        role: 'user',
+                                        content: message,
+                                    }),
+                                });
+                                // Update thread preview
+                                await loadThreads();
+                            } catch (error) {
+                                console.error('Error saving user message:', error);
+                            }
+                        }
+                    }
+                });
+
+                // Listen for chunk-received to save assistant messages
+                chatElement.addEventListener('chunk-received', async (event) => {
+                    // This fires for each chunk, we might want to debounce or save on completion
+                });
+            }
+
+            window.addEventListener('favorites-updated', () => {
+                loadFavorites();
+            });
+        });
+
+        window.createNewThread = createNewThread;
+        window.selectThread = selectThread;
+        window.deleteFavorite = deleteFavorite;
+        window.useFavorite = useFavorite;
+    </script>
+</body>
+</html>
+

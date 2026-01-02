@@ -801,6 +801,64 @@ export class TextComponentRenderer extends BaseComponentRenderer {
       container.innerHTML = `
         <pre class="text-code" style="${textStyle}"><code class="language-${code_language}">${this.escapeHtml(content)}</code></pre>
       `;
+      
+      // Add SQL action buttons for SQL code blocks
+      if (code_language === 'sql' && content && content.trim().length > 20) {
+        console.log('🔧 Adding SQL action buttons for SQL code block, content length:', content.trim().length);
+        const actionsContainer = document.createElement('div');
+        actionsContainer.className = 'sql-actions-container';
+        actionsContainer.style.cssText = 'margin-top: 12px; padding: 12px; border-top: 1px solid #e5e7ea; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; background: #fafafa; border-radius: 8px; z-index: 1000;';
+        
+        const saveBtn = document.createElement('button');
+        saveBtn.textContent = '⭐ Save SQL';
+        saveBtn.style.cssText = 'padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid #ED288E55; background: #ED288E15; color: #a43977; transition: all 0.2s;';
+        saveBtn.onmouseover = () => saveBtn.style.background = '#ED288E25';
+        saveBtn.onmouseout = () => saveBtn.style.background = '#ED288E15';
+        saveBtn.onclick = (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          console.log('💾 Save SQL clicked');
+          this.handleSaveSql(content);
+        };
+        
+        const downloadBtn = document.createElement('button');
+        downloadBtn.textContent = '⬇️ Download SQL';
+        downloadBtn.style.cssText = 'padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid #48387D55; background: #48387D15; color: #48387D; transition: all 0.2s;';
+        downloadBtn.onmouseover = () => downloadBtn.style.background = '#48387D25';
+        downloadBtn.onmouseout = () => downloadBtn.style.background = '#48387D15';
+        downloadBtn.onclick = (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          console.log('⬇️ Download SQL clicked');
+          this.handleDownloadSql(content);
+        };
+        
+        const exportBtn = document.createElement('button');
+        exportBtn.textContent = '⬇️ Export Data (backend)';
+        exportBtn.style.cssText = 'padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid #e5e7ea; background: white; color: #220878; transition: all 0.2s;';
+        exportBtn.onmouseover = () => exportBtn.style.background = '#f2e7fa';
+        exportBtn.onmouseout = () => exportBtn.style.background = 'white';
+        exportBtn.onclick = (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          console.log('📤 Export Data clicked');
+          this.handleExportData(content);
+        };
+        
+        actionsContainer.appendChild(saveBtn);
+        actionsContainer.appendChild(downloadBtn);
+        actionsContainer.appendChild(exportBtn);
+        container.appendChild(actionsContainer);
+        console.log('✅ SQL action buttons added to container');
+      } else {
+        if (code_language === 'sql') {
+          console.log('⚠️ SQL code block detected but conditions not met:', {
+            hasContent: !!content,
+            contentLength: content ? content.trim().length : 0,
+            codeLanguage: code_language
+          });
+        }
+      }
     } else if (markdown) {
       // Markdown text (simple implementation)
       container.innerHTML = `
@@ -834,6 +892,56 @@ export class TextComponentRenderer extends BaseComponentRenderer {
       .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
       .replace(/\n\n/g, '</p><p>')
       .replace(/^(?!<[h|u|l])(.+)$/gm, '<p>$1</p>');
+  }
+
+  private handleSaveSql(sql: string): void {
+    const title = prompt('Save SQL as:', 'My SQL Query');
+    if (!title || !title.trim()) return;
+    
+    const favoriteId = `fav_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const payload = {
+      id: favoriteId,
+      title: title.trim(),
+      type: 'sql',
+      payload: sql,
+    };
+    
+    fetch('/api/chat/favorites', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+      .then(response => {
+        if (response.ok) {
+          alert('SQL saved to favorites!');
+          window.dispatchEvent(new CustomEvent('favorites-updated'));
+        } else {
+          alert('Failed to save SQL');
+        }
+      })
+      .catch(error => {
+        console.error('Error saving SQL:', error);
+        alert('Failed to save SQL');
+      });
+  }
+
+  private handleDownloadSql(sql: string): void {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const blob = new Blob([sql], { type: 'text/sql' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sql_query_${timestamp}.sql`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  private handleExportData(sql: string): void {
+    alert('Export Data feature requires backend integration. SQL:\n\n' + sql.substring(0, 200) + '...');
   }
 }
 

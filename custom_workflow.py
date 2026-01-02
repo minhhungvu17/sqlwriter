@@ -1,5 +1,8 @@
 import re
 import asyncio
+import os
+import csv
+from pathlib import Path
 from typing import List, Dict, Any
 
 import pandas as pd
@@ -19,6 +22,74 @@ class CustomWorkflow(WorkflowHandler):
         r"from\s+elegance,\s*amd\s*and\s*emulsion.*bmi\s+is\s+greater\s+than\s+27\.5.*1:1\s*amd\s*healthy\s*control",
         re.IGNORECASE | re.DOTALL,
     )
+
+    def __init__(self):
+        self.debug_mode = os.getenv("DEBUG_MODE", "false").lower() in ("true", "1", "yes")
+        self.debug_sql_queries = []
+        self.debug_query_index = 0
+        if self.debug_mode:
+            self._load_debug_sql_queries()
+    
+    def _load_debug_sql_queries(self):
+        """Load SQL queries from rows 2-18 in seed_qna.csv for debug mode."""
+        try:
+            possible_paths = [
+                Path(__file__).parent / "business" / "seed_qna.csv",
+                Path("business/seed_qna.csv"),
+                Path(__file__).parent.parent / "business" / "seed_qna.csv",
+            ]
+            
+            csv_path = None
+            for path in possible_paths:
+                if path.exists():
+                    csv_path = path
+                    break
+            
+            if csv_path and csv_path.exists():
+                with open(csv_path, 'r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    row_num = 0
+                    
+                    for row in reader:
+                        row_num += 1
+                        if row_num < 2:
+                            continue
+                        if row_num > 18:
+                            break
+                        
+                        question = row.get('question', '').strip()
+                        sql = row.get('sql', '').strip()
+                        
+                        if sql:
+                            if sql.startswith('"') and sql.endswith('"'):
+                                sql = sql[1:-1]
+                            
+                            if sql and len(sql) > 10:
+                                self.debug_sql_queries.append({
+                                    'question': question,
+                                    'sql': sql
+                                })
+                    
+                    if not self.debug_sql_queries:
+                        print("⚠️ DEBUG_MODE: No SQL queries found in rows 2-18")
+                    else:
+                        print(f"✅ DEBUG_MODE: Loaded {len(self.debug_sql_queries)} SQL queries from {csv_path} (rows 2-18)")
+                        for i, q in enumerate(self.debug_sql_queries, 1):
+                            print(f"   Query {i}: {q['question'][:60]}... (SQL length: {len(q['sql'])} chars)")
+            else:
+                print(f"⚠️ DEBUG_MODE: seed_qna.csv not found. Tried: {possible_paths}")
+                self.debug_sql_queries = [{
+                    'question': 'Default Debug Query',
+                    'sql': "SELECT sequence_shotgun.* FROM response_medical_mastersheet INNER JOIN response_physiology ON response_physiology.response_id = response_medical_mastersheet.response_id WHERE \"Hyperlipidemia/Cholesterol\" = 'FALSE';"
+                }]
+        except Exception as e:
+            print(f"❌ DEBUG_MODE: Error loading seed_qna.csv: {e}")
+            import traceback
+            traceback.print_exc()
+            self.debug_sql_queries = [{
+                'question': 'Default Debug Query',
+                'sql': "SELECT sequence_shotgun.* FROM response_medical_mastersheet INNER JOIN response_physiology ON response_physiology.response_id = response_medical_mastersheet.response_id WHERE \"Hyperlipidemia/Cholesterol\" = 'FALSE';"
+            }]
 
     def _build_records(self) -> List[Dict[str, Any]]:
         # Columns expected by FE tables in this project
@@ -103,6 +174,45 @@ class CustomWorkflow(WorkflowHandler):
         return normalized
 
     async def try_handle(self, agent, user, conversation, message: str) -> WorkflowResult:
+        if self.debug_mode and self.debug_sql_queries:
+            async def stream_debug():
+                query_data = self.debug_sql_queries[self.debug_query_index % len(self.debug_sql_queries)]
+                sql = query_data['sql']
+                question = query_data.get('question', 'Debug SQL Query')
+                
+                self.debug_query_index += 1
+                
+                yield UiComponent(
+                    rich_component=StatusBarUpdateComponent(
+                        status="working",
+                        message="Debug mode: Returning SQL from seed_qna.csv...",
+                        detail=f"Query {self.debug_query_index}: {question[:50]}...",
+                    ),
+                    simple_component=None,
+                )
+                await asyncio.sleep(0.5)
+                
+                sql_component = RichTextComponent(
+                    content=sql,
+                    markdown=False,
+                    code_language="sql"
+                )
+                yield UiComponent(
+                    rich_component=sql_component,
+                    simple_component=None,
+                )
+                
+                yield UiComponent(
+                    rich_component=StatusBarUpdateComponent(
+                        status="idle",
+                        message="Debug SQL returned",
+                        detail="You can now test the Save SQL button",
+                    ),
+                    simple_component=None,
+                )
+            
+            return WorkflowResult(should_skip_llm=True, components=stream_debug())
+        
         if not self._PATTERN.search(message or ""):
             return WorkflowResult(should_skip_llm=False)
 

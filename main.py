@@ -19,6 +19,8 @@ from vanna.core.lifecycle import LifecycleHook
 from seed_tools import SeedReferenceTool
 from seed_rag import seed_on_start
 from custom_workflow import CustomWorkflow
+from chat_storage import ChatStorage
+from chat_routes import register_chat_storage_routes
 
 # Load environment variables from .env if present
 load_dotenv()
@@ -176,7 +178,62 @@ agent = Agent(
 # Seed CSV-based references into memory (idempotent via stable IDs)
 seed_on_start()
 
+# Configure server with dev mode if webcomponent is built locally
+webcomponent_dist = Path(__file__).parent / "vanna" / "frontends" / "webcomponent" / "dist" / "vanna-components.js"
+static_folder = Path(__file__).parent / "static"
+
+# Check if local webcomponent build exists
+dev_mode = webcomponent_dist.exists()
+if dev_mode:
+    # Create static folder and copy built webcomponent
+    static_folder.mkdir(exist_ok=True)
+    import shutil
+    if webcomponent_dist.exists():
+        shutil.copy2(webcomponent_dist, static_folder / "vanna-components.js")
+        logging.info("Using local webcomponent build from: %s", webcomponent_dist)
+    else:
+        dev_mode = False
+        logging.warning("Webcomponent dist file not found, using CDN")
+
+# Initialize chat storage
+chat_storage = ChatStorage(
+    persist_directory=persist_dir,
+    collection_prefix="chat_"
+)
+logging.info("Chat storage initialized with ChromaDB at: %s", persist_dir)
+
 # Run the server
-server = VannaFastAPIServer(agent)
+server_config = {
+    "dev_mode": dev_mode,
+    "static_folder": str(static_folder),
+    "cdn_url": "https://img.vanna.ai/vanna-components.js",
+    "static_path": "/static",
+}
+server = VannaFastAPIServer(agent, config=server_config)
+app = server.create_app()
+
+# Remove the default index route so we can override it with our custom one
+# FastAPI stores routes in app.routes, we need to find and remove the default "/" route
+routes_to_remove = []
+for route in app.routes:
+    if hasattr(route, 'path') and route.path == "/":
+        if hasattr(route, 'methods') and 'GET' in route.methods:
+            routes_to_remove.append(route)
+        elif not hasattr(route, 'methods'):  # Some route types don't have methods
+            routes_to_remove.append(route)
+
+for route in routes_to_remove:
+    app.routes.remove(route)
+    logging.info("Removed default Vanna index route to allow custom override")
+
+# Register chat storage routes (this includes our custom index route)
+register_chat_storage_routes(app, chat_storage, user_resolver, config=server_config)
+
 port = int(os.getenv("PORT", "8001"))
-server.run(host="0.0.0.0", port=port)  # Access at http://localhost:8001
+if dev_mode:
+    logging.info("🚀 Starting server in DEV MODE - using local webcomponent")
+else:
+    logging.info("🚀 Starting server - using CDN webcomponent")
+
+import uvicorn
+uvicorn.run(app, host="0.0.0.0", port=port)  # Access at http://localhost:8001
