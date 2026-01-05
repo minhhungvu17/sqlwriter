@@ -46,10 +46,34 @@ class ChatStorage:
     def _get_client(self):
         """Get or create ChromaDB client."""
         if self._client is None:
-            self._client = chromadb.PersistentClient(
-                path=self.persist_directory,
-                settings=Settings(anonymized_telemetry=False, allow_reset=True),
-            )
+            # Try standard initialization first (works for most versions)
+            try:
+                self._client = chromadb.PersistentClient(
+                    path=self.persist_directory,
+                    settings=Settings(anonymized_telemetry=False, allow_reset=True),
+                )
+            except (ValueError, AttributeError) as e:
+                # If that fails, try with tenant/database (for ChromaDB 0.5.0+)
+                if "tenant" in str(e).lower() or "default_tenant" in str(e):
+                    logger.info("ChromaDB requires tenant/database, using default_tenant/default_database")
+                    try:
+                        self._client = chromadb.PersistentClient(
+                            path=self.persist_directory,
+                            tenant="default_tenant",
+                            database="default_database",
+                            settings=Settings(anonymized_telemetry=False, allow_reset=True),
+                        )
+                    except Exception as e2:
+                        logger.error(f"ChromaDB initialization with tenant/database failed: {e2}")
+                        raise
+                else:
+                    # Other error, try minimal initialization
+                    logger.warning(f"ChromaDB initialization failed, trying minimal setup: {e}")
+                    try:
+                        self._client = chromadb.PersistentClient(path=self.persist_directory)
+                    except Exception as e2:
+                        logger.error(f"Failed to initialize ChromaDB client: {e2}")
+                        raise
         return self._client
 
     def _get_threads_collection(self):

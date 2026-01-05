@@ -9,7 +9,7 @@ python-dotenv
 psycopg[binary]
 
 # Vector store / memory
-chromadb
+chromadb>=0.4.0
 
 # LLM client (Azure OpenAI compatible)
 openai
