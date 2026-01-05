@@ -10,8 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential libpq-dev curl ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Node.js for building webcomponent
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+# Install Node.js 22 for building webcomponent (Vite 7 requires 20.19+ or 22.12+)
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y nodejs
 
 # Install local vanna from repo (instead of PyPI)
@@ -30,6 +30,10 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Copy application
 COPY . /app
+
+# Copy and make scripts executable
+COPY run.sh rebuild-frontend.sh /app/
+RUN chmod +x /app/run.sh /app/rebuild-frontend.sh
 
 # Default port
 ENV PORT=8001
