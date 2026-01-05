@@ -46,17 +46,40 @@ class ChatStorage:
     def _get_client(self):
         """Get or create ChromaDB client."""
         if self._client is None:
-            # Try standard initialization first (works for most versions)
+            # Try standard initialization first (works for ChromaDB < 0.5.0)
             try:
                 self._client = chromadb.PersistentClient(
                     path=self.persist_directory,
                     settings=Settings(anonymized_telemetry=False, allow_reset=True),
                 )
+                # Test if it works by trying to list collections
+                try:
+                    self._client.list_collections()
+                except Exception:
+                    # If list_collections fails, might need tenant/database
+                    raise ValueError("tenant_required")
             except (ValueError, AttributeError) as e:
-                # If that fails, try with tenant/database (for ChromaDB 0.5.0+)
-                if "tenant" in str(e).lower() or "default_tenant" in str(e):
-                    logger.info("ChromaDB requires tenant/database, using default_tenant/default_database")
+                error_str = str(e).lower()
+                # If tenant error, try to create tenant first or use admin client
+                if "tenant" in error_str or "default_tenant" in error_str or "tenant_required" in error_str:
+                    logger.info("ChromaDB requires tenant/database. Attempting to create or use admin client...")
                     try:
+                        # Try using AdminClient to create tenant first
+                        admin_client = chromadb.AdminClient(settings=Settings(anonymized_telemetry=False))
+                        try:
+                            admin_client.create_tenant("default_tenant")
+                            logger.info("Created default_tenant")
+                        except Exception:
+                            # Tenant might already exist, that's okay
+                            pass
+                        try:
+                            admin_client.create_database("default_database", tenant="default_tenant")
+                            logger.info("Created default_database")
+                        except Exception:
+                            # Database might already exist, that's okay
+                            pass
+                        
+                        # Now create the persistent client with tenant/database
                         self._client = chromadb.PersistentClient(
                             path=self.persist_directory,
                             tenant="default_tenant",
@@ -64,8 +87,14 @@ class ChatStorage:
                             settings=Settings(anonymized_telemetry=False, allow_reset=True),
                         )
                     except Exception as e2:
-                        logger.error(f"ChromaDB initialization with tenant/database failed: {e2}")
-                        raise
+                        logger.warning(f"Failed to use tenant/database approach: {e2}")
+                        logger.warning("Falling back to minimal initialization without tenant/database")
+                        # Last resort: try without tenant/database (might work if version supports it)
+                        try:
+                            self._client = chromadb.PersistentClient(path=self.persist_directory)
+                        except Exception as e3:
+                            logger.error(f"All ChromaDB initialization methods failed. Last error: {e3}")
+                            raise RuntimeError(f"Failed to initialize ChromaDB. Try deleting {self.persist_directory} and restarting, or downgrade chromadb: pip install 'chromadb<0.5.0'") from e3
                 else:
                     # Other error, try minimal initialization
                     logger.warning(f"ChromaDB initialization failed, trying minimal setup: {e}")
