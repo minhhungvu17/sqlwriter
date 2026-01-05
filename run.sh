@@ -26,12 +26,17 @@ fi
 echo -e "${GREEN}📦 Activating virtual environment...${NC}"
 source venv/bin/activate
 
-# Check if vanna package is installed
-if ! python3 -c "import vanna" 2>/dev/null; then
-    echo -e "${YELLOW}⚠️  Vanna package not installed. Installing...${NC}"
+# Check if dependencies are installed
+if ! python3 -c "import vanna" 2>/dev/null || ! python3 -c "import dotenv" 2>/dev/null; then
+    echo -e "${YELLOW}⚠️  Dependencies not installed. Installing...${NC}"
     pip install --upgrade pip
+    
+    # Install vanna package first
     pip install -e ./vanna[fastapi,openai,postgres,chromadb]
+    
+    # Install all other dependencies from requirements.txt
     pip install -r requirements.txt
+    
     echo -e "${GREEN}✅ Dependencies installed${NC}"
 fi
 

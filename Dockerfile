@@ -28,11 +28,10 @@ RUN pip install --no-cache-dir -e /app/vanna[fastapi,openai,postgres,chromadb]
 COPY ./requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Copy application
+# Copy application (includes scripts)
 COPY . /app
 
-# Copy and make scripts executable
-COPY run.sh rebuild-frontend.sh /app/
+# Make scripts executable
 RUN chmod +x /app/run.sh /app/rebuild-frontend.sh
 
 # Default port

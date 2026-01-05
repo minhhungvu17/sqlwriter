@@ -18,5 +18,3 @@ openai
 pandas
 matplotlib
 plotly
-
-
