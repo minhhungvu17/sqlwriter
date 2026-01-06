@@ -5,6 +5,7 @@ This module provides the main Agent class that orchestrates the interaction
 between LLM services, tools, and conversation storage.
 """
 
+import re
 import traceback
 import uuid
 from typing import TYPE_CHECKING, AsyncGenerator, List, Optional
@@ -51,6 +52,74 @@ logger.info("Loaded vanna.core.agent.agent module")
 
 if TYPE_CHECKING:
     pass
+
+
+def _contains_sql(text: str) -> bool:
+    """Detect if text contains SQL code.
+    
+    Checks for common SQL patterns including:
+    - SELECT statements
+    - WITH clauses (CTEs)
+    - CREATE TABLE statements
+    - SQL in markdown code blocks
+    """
+    if not text:
+        return False
+    
+    text_upper = text.upper().strip()
+    
+    # Check for SQL keywords at the start or in code blocks
+    sql_patterns = [
+        r'\bSELECT\s+',  # SELECT statements
+        r'\bWITH\s+',   # WITH clauses (CTEs)
+        r'\bCREATE\s+TABLE\b',  # CREATE TABLE
+        r'\bINSERT\s+INTO\b',   # INSERT
+        r'\bUPDATE\s+',         # UPDATE
+        r'\bDELETE\s+FROM\b',   # DELETE
+        r'```sql\s*\n',         # SQL in markdown code blocks
+    ]
+    
+    # Check if any pattern matches
+    for pattern in sql_patterns:
+        if re.search(pattern, text, re.IGNORECASE | re.DOTALL):
+            return True
+    
+    # Also check for SQL in markdown code blocks without language tag
+    # that contain SQL keywords
+    code_block_pattern = r'```\s*\n(.*?)```'
+    code_blocks = re.findall(code_block_pattern, text, re.DOTALL | re.IGNORECASE)
+    for block in code_blocks:
+        block_upper = block.strip().upper()
+        if any(keyword in block_upper for keyword in ['SELECT', 'WITH', 'FROM', 'JOIN', 'WHERE']):
+            return True
+    
+    return False
+
+
+def _extract_sql_from_markdown(text: str) -> Optional[str]:
+    """Extract SQL from markdown code blocks if present.
+    
+    Returns the SQL content if found in markdown code blocks,
+    otherwise returns None.
+    """
+    if not text:
+        return None
+    
+    # Try to extract SQL from ```sql...``` blocks first
+    sql_block_pattern = r'```sql\s*\n(.*?)```'
+    sql_blocks = re.findall(sql_block_pattern, text, re.DOTALL | re.IGNORECASE)
+    if sql_blocks:
+        return sql_blocks[0].strip()
+    
+    # Try generic code blocks that contain SQL keywords
+    code_block_pattern = r'```\s*\n(.*?)```'
+    code_blocks = re.findall(code_block_pattern, text, re.DOTALL | re.IGNORECASE)
+    for block in code_blocks:
+        block_upper = block.strip().upper()
+        if any(keyword in block_upper for keyword in ['SELECT', 'WITH', 'FROM', 'JOIN', 'WHERE']):
+            return block.strip()
+    
+    return None
 
 
 class Agent:
@@ -1041,9 +1110,35 @@ class Agent:
                     conversation.add_message(
                         Message(role="assistant", content=response.content)
                     )
+                    
+                    # Detect if response contains SQL and set code_language accordingly
+                    code_language = None
+                    content_to_display = response.content
+                    use_markdown = True
+                    
+                    if _contains_sql(response.content):
+                        # Try to extract SQL from markdown code blocks
+                        extracted_sql = _extract_sql_from_markdown(response.content)
+                        if extracted_sql and len(extracted_sql) > 20:
+                            # If we found SQL in a code block and it's substantial,
+                            # use just the SQL to ensure buttons appear
+                            # This handles cases where LLM returns SQL in ```sql...``` blocks
+                            content_to_display = extracted_sql
+                            code_language = "sql"
+                            use_markdown = False
+                        else:
+                            # SQL is in the text but not in a code block, or SQL is too short
+                            # Set code_language so frontend can detect it
+                            # Frontend will render as code block when code_language is set
+                            code_language = "sql"
+                            # Note: frontend checks code_language first, so markdown is ignored
+                            # when code_language is set, ensuring buttons appear
+                    
                     yield UiComponent(
                         rich_component=RichTextComponent(
-                            content=response.content, markdown=True
+                            content=content_to_display,
+                            markdown=use_markdown,
+                            code_language=code_language
                         ),
                         simple_component=SimpleTextComponent(text=response.content),
                     )
