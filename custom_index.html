@@ -6,197 +6,91 @@
     <title>AI SQL Writer</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { purple: '#48387D', pink: '#ED288E' }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
     <!-- VannaComponentScript -->
     <style>
-        body {
-            background: linear-gradient(to bottom, #e7e1cf, #ffffff, #e7e1cf);
-            min-height: 100vh;
-            margin: 0;
-            font-family: 'Space Grotesk', sans-serif;
-        }
-        #appLayout {
-            display: flex;
-            height: 100vh;
-            width: 100vw;
+        .chat-container {
+            position: relative;
             overflow: hidden;
-            box-sizing: border-box;
-        }
-        #leftSidebar {
-            width: 260px;
-            min-width: 260px;
-            max-width: 260px;
-            background: white;
-            border-right: 1px solid #e5e7ea;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
-            position: relative;
-            z-index: 100;
-            flex-shrink: 0;
         }
-        #chatArea {
+        .chat-container vanna-chat {
             flex: 1;
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
+            min-height: 0;
+            width: 100% !important;
+            max-width: 100% !important;
             overflow: hidden;
-            position: relative;
         }
-        vanna-chat {
-            width: 100%;
-            height: 100%;
-            display: block;
-            box-sizing: border-box;
-            position: relative !important;
-            max-width: 100%;
-        }
-        /* Prevent chatbox from expanding beyond its container */
-        #chatArea {
-            overflow: hidden;
-            max-width: calc(100vw - 260px);
-        }
-        .sidebar-section {
-            padding: 16px;
-            border-bottom: 1px solid #e5e7ea;
-            overflow-y: auto;
-        }
-        .sidebar-section:last-child {
-            border-bottom: none;
-        }
-        .sidebar-section h3 {
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: #4d3c88;
-            margin: 0 0 12px 0;
-        }
-        .thread-item, .favorite-item {
-            padding: 8px 12px;
-            margin-bottom: 4px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background 0.2s;
-            border: 1px solid transparent;
-        }
-        .thread-item:hover, .favorite-item:hover {
-            background: #f2e7fa;
-        }
-        .thread-item.active {
-            background: #ED288E10;
-            border-color: #ED288E55;
-        }
-        .thread-title {
-            font-weight: 600;
-            font-size: 13px;
-            color: #220878;
-            margin-bottom: 4px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .thread-preview {
-            font-size: 11px;
-            color: #666;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .favorite-title {
-            font-weight: 600;
-            font-size: 13px;
-            color: #220878;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 4px;
-        }
-        .favorite-type {
-            font-size: 10px;
-            padding: 2px 8px;
-            border-radius: 12px;
-            background: #ED288E15;
-            color: #a43977;
-        }
-        .favorite-preview {
-            font-size: 11px;
-            color: #666;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .btn-delete {
-            padding: 4px 8px;
-            font-size: 10px;
-            border-radius: 4px;
-            border: 1px solid #e5e7ea;
-            background: white;
-            color: #666;
-            cursor: pointer;
-        }
-        .btn-delete:hover {
-            background: #fee;
-            color: #c00;
-        }
-        .empty-state {
-            color: #777;
-            font-size: 11px;
-            padding: 12px;
-            text-align: center;
-        }
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        .btn-new {
-            padding: 4px 8px;
-            font-size: 10px;
-            border-radius: 4px;
-            border: 1px solid #ED288E55;
-            background: #ED288E15;
-            color: #a43977;
-            cursor: pointer;
-        }
-        .btn-new:hover {
-            background: #ED288E25;
-        }
+        
     </style>
 </head>
-<body>
-    <div id="appLayout">
-        <div id="leftSidebar">
-            <div class="sidebar-section" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
-                <div class="section-header">
-                    <h3>Chat History</h3>
-                    <button class="btn-new" onclick="createNewThread()">+ New</button>
+<body class="m-0 p-0 bg-gradient-to-r from-brand-purple to-brand-pink font-sans">
+    <div class="flex flex-col h-screen w-screen overflow-hidden">
+        
+        <!-- Header -->
+        <header class="bg-gradient-to-r from-brand-purple to-brand-pink text-white px-6 py-6 shrink-0">
+            <h1 class="text-2xl font-semibold mt-1">AI SQL Writer</h1>
+            <p class="text-xs mt-1 opacity-90">Query your database using natural language powered by AI.</p>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex flex-1 gap-4 p-4 min-h-0">
+            
+            <!-- Left Sidebar -->
+            <aside class="w-[260px] min-w-[260px] max-w-[260px] bg-white rounded-3xl shadow-xl flex flex-col overflow-hidden shrink-0">
+                
+                <!-- Chat History Section -->
+                <section class="p-4 border-b border-gray-200 flex-1 min-h-0 flex flex-col">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-xs font-semibold uppercase tracking-wider text-brand-purple">Chat History</h3>
+                        <button onclick="createNewThread()" class="px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-brand-purple to-brand-pink rounded-lg shadow hover:shadow-md transition-all hover:-translate-y-0.5">
+                            + New
+                        </button>
+                    </div>
+                    <div id="threadsList" class="flex-1 overflow-y-auto">
+                        <div class="text-gray-500 text-xs text-center py-3">No chat history</div>
+                    </div>
+                </section>
+                
+                <!-- Saved SQL Section -->
+                <section class="p-4 flex-1 min-h-0 flex flex-col">
+                    <h3 class="text-xs font-semibold uppercase tracking-wider text-brand-purple mb-3">Saved SQL</h3>
+                    <div id="favoritesList" class="flex-1 overflow-y-auto">
+                        <div class="text-gray-500 text-xs text-center py-3">No saved SQL</div>
+                    </div>
+                </section>
+            </aside>
+
+            <!-- Chat Area -->
+            <section class="flex-1 flex flex-col bg-white rounded-3xl shadow-xl overflow-hidden min-w-0">
+                <div class="chat-container flex-1 bg-gray-200 rounded-b-3xl">
+                    <vanna-chat
+                        id="vchat"
+                        title="Smart Cohort Builder"
+                        api-base=""
+                        sse-endpoint="/api/vanna/v2/chat_sse"
+                        ws-endpoint="/api/vanna/v2/chat_websocket"
+                        poll-endpoint="/api/vanna/v2/chat_poll">
+                    </vanna-chat>
                 </div>
-                <div id="threadsList" style="flex: 1; overflow-y: auto;">
-                    <div class="empty-state">No chat history</div>
-                </div>
-            </div>
-            <div class="sidebar-section" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
-                <div class="section-header">
-                    <h3>Saved SQL</h3>
-                </div>
-                <div id="favoritesList" style="flex: 1; overflow-y: auto;">
-                    <div class="empty-state">No saved SQL</div>
-                </div>
-            </div>
-        </div>
-        <div id="chatArea">
-            <vanna-chat
-                id="vchat"
-                title="AI SQL Writer"
-                api-base=""
-                sse-endpoint="/api/vanna/v2/chat_sse"
-                ws-endpoint="/api/vanna/v2/chat_websocket"
-                poll-endpoint="/api/vanna/v2/chat_poll">
-            </vanna-chat>
-        </div>
+            </section>
+        </main>
     </div>
 
     <script>
@@ -235,15 +129,16 @@
         function renderThreads() {
             const container = document.getElementById('threadsList');
             if (threads.length === 0) {
-                container.innerHTML = '<div class="empty-state">No chat history</div>';
+                container.innerHTML = '<div class="text-gray-500 text-xs text-center py-3">No chat history</div>';
                 return;
             }
             container.innerHTML = threads.map(thread => {
                 const preview = thread.preview || '';
+                const isActive = thread.id === currentThreadId;
                 return `
-                    <div class="thread-item ${thread.id === currentThreadId ? 'active' : ''}" onclick="selectThread('${thread.id}')">
-                        <div class="thread-title">${escapeHtml(thread.title)}</div>
-                        <div class="thread-preview">${escapeHtml(preview)}</div>
+                    <div class="p-2 px-3 mb-1 rounded-lg cursor-pointer transition-colors border ${isActive ? 'bg-pink-50 border-pink-300' : 'border-transparent hover:bg-purple-50'}" onclick="selectThread('${thread.id}')">
+                        <div class="font-semibold text-sm text-brand-purple truncate">${escapeHtml(thread.title)}</div>
+                        <div class="text-xs text-gray-500 truncate">${escapeHtml(preview)}</div>
                     </div>
                 `;
             }).join('');
@@ -305,7 +200,7 @@
         function renderFavorites() {
             const container = document.getElementById('favoritesList');
             if (favorites.length === 0) {
-                container.innerHTML = '<div class="empty-state">No saved SQL</div>';
+                container.innerHTML = '<div class="text-gray-500 text-xs text-center py-3">No saved SQL</div>';
                 return;
             }
             container.innerHTML = favorites.filter(fav => fav.type === 'sql').map(fav => {
@@ -313,15 +208,15 @@
                     ? fav.payload.substring(0, 50) + '...' 
                     : fav.payload;
                 return `
-                    <div class="favorite-item">
-                        <div class="favorite-title">
-                            <span>${escapeHtml(fav.title)}</span>
-                            <span class="favorite-type">${fav.type.toUpperCase()}</span>
+                    <div class="p-2 px-3 mb-1 rounded-lg cursor-pointer transition-colors border border-transparent hover:bg-purple-50">
+                        <div class="font-semibold text-sm text-brand-purple flex justify-between items-center">
+                            <span class="truncate">${escapeHtml(fav.title)}</span>
+                            <span class="text-xs px-2 py-0.5 rounded-full bg-gradient-to-r from-brand-purple to-brand-pink text-white">SQL</span>
                         </div>
                         <div class="favorite-preview">${escapeHtml(preview)}</div>
                         <div style="display: flex; gap: 4px; margin-top: 4px;">
-                            <button class="btn-delete" onclick="useFavorite('${fav.id}')" title="Use">Use</button>
-                            <button class="btn-delete" onclick="deleteFavorite('${fav.id}')" title="Delete">🗑</button>
+                         <button class="px-2 py-1 text-xs rounded border border-gray-200 bg-white text-gray-600 hover:bg-green-50 hover:text-green-600 hover:border-green-300 transition-colors" onclick="useFavorite('${fav.id}')">Use</button>
+                    <button class="px-2 py-1 text-xs rounded border border-gray-200 bg-white text-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors" onclick="deleteFavorite('${fav.id}')">Delete</button>
                         </div>
                     </div>
                 `;
@@ -365,48 +260,6 @@
             return div.innerHTML;
         }
 
-        function adjustChatPosition() {
-            const chat = document.getElementById('vchat');
-            if (!chat) return;
-            
-            // Check if chat is minimized or maximized
-            const isMinimized = chat.classList.contains('minimized');
-            const isMaximized = chat.classList.contains('maximized');
-            
-            const sidebarWidth = 260;
-            
-            const sidebar = document.getElementById('leftSidebar');
-            const actualSidebarWidth = sidebar ? sidebar.offsetWidth : 260;
-            
-            if (isMinimized || isMaximized) {
-                // Force fixed positioning and adjust left position to account for sidebar
-                const targetLeft = actualSidebarWidth + 20;
-                chat.style.setProperty('position', 'fixed', 'important');
-                chat.style.setProperty('left', `${targetLeft}px`, 'important');
-                chat.style.setProperty('z-index', '50', 'important');
-                
-                // For maximized, also set right to prevent overflow
-                if (isMaximized) {
-                    chat.style.setProperty('right', '24px', 'important');
-                } else {
-                    chat.style.removeProperty('right');
-                }
-            } else {
-                // Reset to relative positioning when in normal state
-                chat.style.removeProperty('position');
-                chat.style.removeProperty('left');
-                chat.style.removeProperty('right');
-                chat.style.removeProperty('z-index');
-                
-                // Ensure it stays within chatArea bounds
-                const chatArea = document.getElementById('chatArea');
-                if (chatArea) {
-                    const maxWidth = window.innerWidth - actualSidebarWidth;
-                    chat.style.setProperty('max-width', `${maxWidth}px`, 'important');
-                }
-            }
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
             loadThreads();
             loadFavorites();
@@ -415,11 +268,12 @@
             if (chat) {
                 try {
                     chat.showProgress = false;
-                    chat.startingState = 'maximized';
-                    chat.windowState = 'maximized';
-                    if (chat.maximizeWindow) {
-                        chat.maximizeWindow();
-                    }
+                    chat.allowMinimize = false; //  disable minimize
+                    chat.startingState = 'normal';
+                    chat.windowState = 'normal';
+                    // if (chat.maximizeWindow) {
+                    //     chat.maximizeWindow();
+                    // }
                     
                     // Monitor for state changes
                     const observer = new MutationObserver(() => {
