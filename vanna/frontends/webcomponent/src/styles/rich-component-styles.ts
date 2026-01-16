@@ -59,7 +59,7 @@ export const richComponentStyles = css`
   .card-title {
     margin: 0;
     font-size: 1rem;
-    color: var(--vanna-foreground-default);
+    color: #6b7280 !important;
   }
 
   .card-subtitle {
@@ -700,7 +700,7 @@ export const richComponentStyles = css`
   .chart-title {
     font-size: 1.125rem;
     font-weight: 600;
-    color: var(--vanna-foreground-default);
+    color: #6b7280 !important;
     margin: 0;
   }
 
@@ -728,6 +728,9 @@ export const richComponentStyles = css`
   .rich-dataframe {
     overflow: hidden;
     font-family: var(--vanna-font-family-default);
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
   }
 
   .dataframe-header {
@@ -739,7 +742,7 @@ export const richComponentStyles = css`
   .dataframe-title {
     margin: 0 0 var(--vanna-space-2) 0;
     font-size: 1rem;
-    color: var(--vanna-foreground-default);
+    color: #6b7280 !important;
   }
 
   .dataframe-description {
@@ -809,10 +812,12 @@ export const richComponentStyles = css`
     border: 1px solid var(--vanna-outline-dimmer);
     border-radius: var(--vanna-border-radius-md);
     margin: var(--vanna-space-4) 0;
+    max-width: 100%;
   }
 
   .dataframe-table {
-    width: 100%;
+    min-width: 100%;
+    width: max-content;
     border-collapse: collapse;
     font-size: 0.875rem;
     font-family: var(--vanna-font-family-default);
