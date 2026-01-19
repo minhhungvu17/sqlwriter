@@ -163,7 +163,7 @@ export class VannaChat extends LitElement {
 
       .chat-header {
         padding: var(--vanna-space-6) var(--vanna-space-7);
-        background: linear-gradient(135deg, var(--chat-primary) 0%, var(--chat-primary-stronger) 100%);
+        background: rgb(188, 181, 183);
         border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         display: flex;
         flex-direction: column;
