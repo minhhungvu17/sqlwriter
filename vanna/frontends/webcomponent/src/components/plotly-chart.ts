@@ -131,14 +131,30 @@ export class PlotlyChart extends LitElement {
       // Only add font/modebar if not already set by backend
       font: this.layout.font || {
         family: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        color: isDark ? 'rgb(242, 244, 247)' : 'rgb(17, 24, 39)',
+        color: isDark ? 'rgb(242, 244, 247)' : 'rgb(107, 114, 128)',
         size: 12
       },
+      // Set title font color to grey
+      title: this.layout.title ? {
+        ...((typeof this.layout.title === 'string') ? { text: this.layout.title } : this.layout.title),
+        font: {
+          color: isDark ? 'rgb(156, 163, 175)' : 'rgb(107, 114, 128)',
+          size: 14
+        }
+      } : undefined,
       modebar: this.layout.modebar || {
         bgcolor: isDark ? 'rgba(21, 26, 38, 0.8)' : 'rgba(255, 255, 255, 0.8)',
         color: isDark ? 'rgb(177, 186, 196)' : 'rgb(75, 85, 99)',
         activecolor: isDark ? 'rgb(242, 244, 247)' : 'rgb(17, 24, 39)',
         orientation: 'h'
+      },
+      // Add margins for better spacing around axes
+      margin: this.layout.margin || {
+        l: 60,
+        r: 30,
+        t: 50,
+        b: 60,
+        pad: 10
       },
       // Set explicit dimensions for Shadow DOM compatibility
       autosize: false,

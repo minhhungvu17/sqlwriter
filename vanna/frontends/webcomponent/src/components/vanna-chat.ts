@@ -152,7 +152,9 @@ export class VannaChat extends LitElement {
         border-right: 1px solid var(--chat-outline);
         background: var(--chat-surface);
         min-height: 0;
+        min-width: 0;
         height: 100%;
+        overflow: hidden;
       }
 
       .chat-layout.compact .chat-main {
@@ -161,7 +163,7 @@ export class VannaChat extends LitElement {
 
       .chat-header {
         padding: var(--vanna-space-6) var(--vanna-space-7);
-        background: linear-gradient(135deg, var(--chat-primary) 0%, var(--chat-primary-stronger) 100%);
+        background: rgb(188, 181, 183);
         border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         display: flex;
         flex-direction: column;
@@ -238,7 +240,7 @@ export class VannaChat extends LitElement {
         font-size: 18px;
         font-weight: 600;
         letter-spacing: -0.01em;
-        color: var(--chat-primary-foreground);
+        color: #6b7280;
       }
 
       .chat-subtitle {
@@ -348,6 +350,7 @@ export class VannaChat extends LitElement {
         flex-direction: column;
         gap: var(--vanna-space-4);
         min-height: 0;
+        min-width: 0;
         max-height: 100%;
         position: relative;
       }
@@ -401,11 +404,16 @@ export class VannaChat extends LitElement {
         display: flex;
         flex-direction: column;
         gap: var(--vanna-space-4);
+        width: 100%;
+        min-width: 0;
       }
 
       .rich-component-wrapper {
         margin: var(--vanna-space-2) 0;
         animation: fade-in-up 0.3s ease-out;
+        width: 100%;
+        min-width: 0;
+        overflow-x: auto;
       }
 
       .unknown-component {
@@ -889,11 +897,6 @@ export class VannaChat extends LitElement {
 
   private async _sendMessageInternal(messageText: string): Promise<boolean> {
     console.log('_sendMessageInternal called with:', messageText);
-
-    // Auto-maximize window when user sends a message (if not already maximized or minimized)
-    if (this.windowState !== 'maximized' && this.windowState !== 'minimized') {
-      this.maximizeWindow();
-    }
 
     // Create user message as a rich component and send to ComponentManager
     const userRichComponent: RichComponent = {
