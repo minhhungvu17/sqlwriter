@@ -1,0 +1,78 @@
+User Term,User's Definition,Related/Synonyms,Related Schema,Logic/Filters (The SQL Rule)
+Sugar,Glucose levels in blood,"glucose, glc, hba1c, diabetic",lab_results.val,WHERE test_id = 'GLU_01'
+Weight Status,How heavy/obese a user is,"bmi, mass, heavy, obesity",bio_metrics.bmi,bmi > 25 is 'Overweight'
+Macros,Daily intake of nutrients,"protein, fat, carbs, calories",diet_logs.value,SUM(val) GROUP BY nutrient_type
+"BMI (ELEGANCE, derived)",Body mass index (BMI) from height/weight,"bmi, obesity, weight value","""10_elegance_other_information"".weight_val, ""10_elegance_other_information"".height_val","""10_elegance_other_information"".weight_val / POWER(""10_elegance_other_information"".height_val / 100.0, 2)"
+BMI (AMD),BMI from AMD survey,"bmi, obesity","response_physiology.""physiology-bmi-bmi""","ROUND(response_physiology.""physiology-bmi-bmi""::numeric, 2) AS bmi_val"
+BMI (EMULSION),BMI recorded in EMULSION clinical metadata,"bmi, obesity",emulsion_clinical_metadata.bmi_val,"ROUND(emulsion_clinical_metadata.bmi_val::numeric, 2) AS bmi_val"
+Underweight exclusion,Remove BMI < 18.5,underweight,"ELEGANCE derived BMI; response_physiology.""physiology-bmi-bmi""; emulsion_clinical_metadata.bmi_val","AND bmi_val >= 18.5 (applied per dataset: o.weight_val / POWER(o.height_val/100.0,2) >= 18.5, rp.""physiology-bmi-bmi"" >= 18.5, c.bmi_val >= 18.5)"
+BMI threshold (final unhealthy),Unhealthy cohort must have BMI > 27.5 or user determines the > value,"obese, high BMI",unhealthy_raw.bmi_val,WHERE u.bmi_val > 27.5
+Hypertension (ELEGANCE flag),Hypertension indicator,"HBP, high blood pressure","""10_elegance_other_information"".systolic_blood_pressure_val, ""10_elegance_other_information"".diastolic_blood_pressure_val",CASE WHEN o.systolic_blood_pressure_val >= 130 AND o.diastolic_blood_pressure_val >= 80 THEN 1 ELSE 0 END AS hypertension_ind
+Diabetes (ELEGANCE flag),Diabetes via HbA1c,"diabetic, hba1c",elegance_biomarker_data.hba1c_val OR elegance_biomarker_extension_data.hba1c_val,CASE WHEN b.hba1c_val >= 6.5 THEN 1 ELSE 0 END AS diabetes_ind (main) / CASE WHEN be.hba1c_val >= 6.5 THEN 1 ELSE 0 END (extension)
+Hyperlipidaemia (ELEGANCE flag),High lipids via cholesterol or TG,"dyslipidemia, high TG","elegance_biomarker_data.total_cholesterol_val, elegance_biomarker_data.triglyceride_val OR extension equivalents",CASE WHEN b.total_cholesterol_val >= 6.2 OR b.triglyceride_val >= 2.3 THEN 1 ELSE 0 END AS hyperlipidaemia_ind (and same for be.)
+Hypertension (AMD flag),Hypertension from medical mastersheet,HBP,"response_medical_mastersheet.""hypertension""","CASE WHEN rm.""hypertension"" = TRUE THEN 1 ELSE 0 END AS hypertension_ind"
+Diabetes (AMD flag),Type II diabetes from medical mastersheet,T2D,"response_medical_mastersheet.""Type II Diabetes""","CASE WHEN rm.""Type II Diabetes"" = TRUE THEN 1 ELSE 0 END AS diabetes_ind"
+Hyperlipidaemia (AMD flag),Lipid issue from medical mastersheet,"cholesterol, hyperlipidemia","response_medical_mastersheet.""Hyperlipidemia/Cholesterol""","CASE WHEN rm.""Hyperlipidemia/Cholesterol"" = TRUE THEN 1 ELSE 0 END AS hyperlipidaemia_ind"
+Hypertension (EMULSION flag),Hypertension indicator from EMULSION,HBP,emulsion_clinical_metadata.hypertension_ind,c.hypertension_ind
+Diabetes (EMULSION flag),Diabetes indicator from EMULSION,diabetic,emulsion_clinical_metadata.diabetes_ind,c.diabetes_ind
+Hyperlipidaemia (EMULSION flag),Dyslipidemia indicator for EMULSION,"dyslipidemia, high TG","emulsion_clinical_metadata.dyslipidemia_ind, emulsion_clinical_metadata.""high_TG_ind""","CASE WHEN c.dyslipidemia_ind = 1 OR c.""high_TG_ind"" = 1 THEN 1 ELSE 0 END AS hyperlipidaemia_ind"
+Subject ID (ELEGANCE),Subject identifier,participant id,elegance_subject_metadata.subject_id,Selected as metadata.subject_id then joined to biomarker tables on subject_id
+Subject ID (AMD),AMD subject code used as subject_id,amd_code,response_metadata.amd_code,meta.amd_code AS subject_id
+Subject ID (EMULSION),EMULSION subject identifier,subject id,emulsion_clinical_metadata.subject_id,c.subject_id
+Gender (ELEGANCE),Gender label,sex,elegance_demographic_profile.gender_desc,d.gender_desc AS gender
+Gender (AMD),Gender label from demographic survey,sex,"response_demographic.""demographic-gender-gender""","dm.""demographic-gender-gender"" AS gender"
+Gender (EMULSION),Gender derived from code,sex,emulsion_clinical_metadata.gender_cd,CASE WHEN c.gender_cd::int = 1 THEN 'Male' ELSE 'Female' END AS gender
+Age (ELEGANCE),Age,age,elegance_demographic_profile.hcc10_age_no,d.hcc10_age_no AS age_no
+Age (AMD),Age from demographic survey,age,"response_demographic.""demographic-age-age""","dm.""demographic-age-age"" AS age_no"
+Age (EMULSION),Enrolment age,age,emulsion_clinical_metadata.enrolment_age_no,c.enrolment_age_no AS age_no
+Race (ELEGANCE),Ethnicity label,race,elegance_demographic_profile.ethnicity_desc,d.ethnicity_desc AS race
+Race (AMD),Race from paternal ethnicity field,ethnicity,"response_demographic.""demographic-ethnicity-race_paternal""","dm.""demographic-ethnicity-race_paternal"" AS race"
+Race (EMULSION),Race derived from code,ethnicity,emulsion_clinical_metadata.race_cd,CASE WHEN c.race_cd::int = 0 THEN 'Chinese' WHEN c.race_cd::int = 1 THEN 'Malay' WHEN c.race_cd::int = 2 THEN 'Indian' ELSE 'Others' END AS race
+Donor join key (sp_cd),Join donor biomarker to mapping by sp code,sp_cd,fmt_donor_biomarker.sp_cd; fmt_donor_biomarker_mapping.sp_cd,a.sp_cd = b.sp_cd
+Donor join key (new_id),Join donor biomarker to mapping by new id,new_id,fmt_donor_biomarker.new_id; fmt_donor_biomarker_mapping.new_id,a.new_id = b.new_id
+Donor mapping join (fmt_prep),Join donor mapping to sequence mapping via fmt_prep,fmt_prep,fmt_donor_biomarker_mapping.fmt_prep; fmt_sequence_mapping.fmt_prep,b.fmt_prep = fmt.fmt_prep
+Donor sequencing join (sequence_number),Join sequence mapping to shotgun table,sequence_number,fmt_sequence_mapping.sequence_number; sequence_shotgun.sequence_number,fmt.sequence_number = ss.sequence_number
+Donor fmt_id,FMT donor identifier,fmt_id,fmt_sequence_mapping.fmt_id,fmt.fmt_id
+Donor fmt_prep,Donor preparation identifier,fmt_prep,fmt_sequence_mapping.fmt_prep,fmt.fmt_prep
+Donor sequence_number,Donor shotgun sequence number,sequence_number,sequence_shotgun.sequence_number,ss.sequence_number
+Donor kit_id,Donor kit identifier,kit_id,sequence_shotgun.kit_id,ss.kit_id
+Donor gender_cd,Donor gender code,"sex, gender_cd",fmt_donor_biomarker.gender_cd,a.gender_cd
+Donor age_no,Donor age number,age_no,fmt_donor_biomarker.age_no,a.age_no
+Donor dedupe rule,Keep 1 donor row per fmt_prep,row_number,fmt_sequence_mapping.fmt_prep; sequence_shotgun.sequence_number,ROW_NUMBER() OVER (PARTITION BY fmt.fmt_prep ORDER BY ss.sequence_number) = 1
+Pre join key (kit_id),Join pre_ftp_raw to shotgun table using case-insensitive kit_id,kit join,pre_ftp_raw.kit_id; sequence_shotgun.kit_id,UPPER(a.kit_id) = UPPER(b.kit_id)
+Pre fmt_prep_id,Pre-FTP preparation identifier,fmt_prep_id,pre_ftp_raw.fmt_prep_id,a.fmt_prep_id
+Pre kit_id,Pre-FTP kit identifier,kit_id,pre_ftp_raw.kit_id,a.kit_id
+Pre sequence_number,Pre-FTP shotgun sequence number,sequence_number,sequence_shotgun.sequence_number,b.sequence_number
+Pre gender_cd,Pre-FTP gender code,"sex, gender_cd",pre_ftp_raw.gender_cd,a.gender_cd
+Pre health_current_state_score,Pre-FTP current health score,health score,pre_ftp_raw.health_current_state_score,a.health_current_state_score
+Pre liquid_stool_no,Pre-FTP liquid stool count,stool,pre_ftp_raw.liquid_stool_no,a.liquid_stool_no
+Pre bowel_movement_no,Pre-FTP bowel movement count,bm count,pre_ftp_raw.bowel_movement_no,a.bowel_movement_no
+Pre medical_history_fmt_cat,Pre-FTP medical history category,med history,pre_ftp_raw.medical_history_fmt_cat,a.medical_history_fmt_cat
+Pre medical_history_fmt_oth_txt,Pre-FTP medical history other text,med history text,pre_ftp_raw.medical_history_fmt_oth_txt,a.medical_history_fmt_oth_txt
+Pre abdominal_pain_cat,Pre-FTP abdominal pain category,pain,pre_ftp_raw.abdominal_pain_cat,a.abdominal_pain_cat
+Pre abdominal_bloating_intensity_cat,Pre-FTP bloating intensity category,bloating,pre_ftp_raw.abdominal_bloating_intensity_cat,a.abdominal_bloating_intensity_cat
+Pre general_health_past_1_week_cat,Pre-FTP general health past week category,general health,pre_ftp_raw.general_health_past_1_week_cat,a.general_health_past_1_week_cat
+Pre sequencing presence,Require pre sample to have sequencing,has sequence,sequence_shotgun.sequence_number,b.sequence_number IS NOT NULL
+Pre dedupe rule,Keep 1 pre row per fmt_prep_id,row_number,pre_ftp_raw.fmt_prep_id; sequence_shotgun.sequence_number,ROW_NUMBER() OVER (PARTITION BY a.fmt_prep_id ORDER BY b.sequence_number) = 1
+Post join key (kit_id),Join post_ftp_raw to shotgun table using case-insensitive kit_id,kit join,post_ftp_raw.kit_id; sequence_shotgun.kit_id,UPPER(a.kit_id) = UPPER(b.kit_id)
+Post fmt_prep_id,Post-FTP preparation identifier,fmt_prep_id,post_ftp_raw.fmt_prep_id,a.fmt_prep_id
+Post kit_id,Post-FTP kit identifier,kit_id,post_ftp_raw.kit_id,a.kit_id
+Post sequence_number,Post-FTP shotgun sequence number,sequence_number,sequence_shotgun.sequence_number,b.sequence_number
+Post gender_cd,Post-FTP gender code,"sex, gender_cd",post_ftp_raw.gender_cd,a.gender_cd
+Post health_current_state_score,Post-FTP current health score,health score,post_ftp_raw.health_current_state_score,a.health_current_state_score
+Post liquid_stool_no,Post-FTP liquid stool count,stool,post_ftp_raw.liquid_stool_no,a.liquid_stool_no
+Post bowel_movement_no,Post-FTP bowel movement count,bm count,post_ftp_raw.bowel_movement_no,a.bowel_movement_no
+Post medical_history_fmt_cat,Post-FTP medical history category,med history,post_ftp_raw.medical_history_fmt_cat,a.medical_history_fmt_cat
+Post medical_history_fmt_oth_txt,Post-FTP medical history other text,med history text,post_ftp_raw.medical_history_fmt_oth_txt,a.medical_history_fmt_oth_txt
+Post abdominal_pain_cat,Post-FTP abdominal pain category,pain,post_ftp_raw.abdominal_pain_cat,a.abdominal_pain_cat
+Post abdominal_bloating_intensity_cat,Post-FTP bloating intensity category,bloating,post_ftp_raw.abdominal_bloating_intensity_cat,a.abdominal_bloating_intensity_cat
+Post general_health_past_1_week_cat,Post-FTP general health past week category,general health,post_ftp_raw.general_health_past_1_week_cat,a.general_health_past_1_week_cat
+Post sequencing presence,Require post sample to have sequencing,has sequence,sequence_shotgun.sequence_number,b.sequence_number IS NOT NULL
+Post dedupe rule,Keep 1 post row per fmt_prep_id,row_number,post_ftp_raw.fmt_prep_id; sequence_shotgun.sequence_number,ROW_NUMBER() OVER (PARTITION BY a.fmt_prep_id ORDER BY b.sequence_number) = 1
+Pre/Post pairing rule,Require pre and post to be same fmt_prep_id,matched pair,pre_ftp_raw.fmt_prep_id; post_ftp_raw.fmt_prep_id,post.fmt_prep_id = pre.fmt_prep_id
+Donor/FTP linking transform,Link pre/post fmt_prep_id to donor fmt_prep by trimming last 2 chars,string transform,pre_ftp_raw.fmt_prep_id; fmt_sequence_mapping.fmt_prep,"LEFT(TRIM(pre.fmt_prep_id), LENGTH(TRIM(pre.fmt_prep_id)) - 2) = d.fmt_prep"
+Output status (DONOR),Derived row label for donor output,status,(derived),DONOR'
+Output status (PRE_FTP),Derived row label for pre output,status,(derived),PRE_FTP'
+Output status (POST_FTP),Derived row label for post output,status,(derived),POST_FTP'
+Output null numeric fields (donor),Ensure numeric fields align across UNION,null cast numeric,(derived),NULL::numeric
+Output null text fields (donor),Ensure text fields align across UNION,null cast text,(derived),NULL::text

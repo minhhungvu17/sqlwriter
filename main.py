@@ -21,6 +21,7 @@ from seed_rag import seed_on_start
 from custom_workflow import CustomWorkflow
 from chat_storage import ChatStorage
 from chat_routes import register_chat_storage_routes
+from mapping_context import MappingTable, MappingLlmContextEnhancer
 
 # Load environment variables from .env if present
 load_dotenv()
@@ -172,7 +173,12 @@ agent = Agent(
     agent_memory=agent_memory,
     config=ui_cfg,
     workflow_handler=CustomWorkflow(),
-    lifecycle_hooks=[SqlResultLoggingHook()]
+    lifecycle_hooks=[SqlResultLoggingHook()],
+    # Inject mapping-based context enhancer so user terms map to schemas/filters
+    llm_context_enhancer=MappingLlmContextEnhancer(
+        mapping_table=MappingTable(),
+        agent_memory=agent_memory
+    ),
 )
 
 # Seed CSV-based references into memory (idempotent via stable IDs)
