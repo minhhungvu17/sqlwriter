@@ -1,3 +1,5 @@
+import "./tailwind.css";
+
 // Log build information when the module loads
 console.log(
   '%c🎨 Vanna Web Components',
